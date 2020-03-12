@@ -2242,10 +2242,7 @@ def results():
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups la promoción que esta buscando tal vez no exista.')
-		if origen=="FACEBOOK":
-			return restaurantes_has_promocion_info(restaurantes)
-		else:
-			return restaurantes_has_promocion_info(restaurantes)
+		return restaurantes_has_promocion_info(restaurantes)
 
 	#endregion
 	#endregion
