@@ -2974,6 +2974,29 @@ def results():
 	#endregion
 
 	#region servicios
+	if action=="action1.servicios_listar":
+		if origen=="FACEBOOK":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT servicios.nombre FROM servicios LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					resp = ""#inicializamos variable resp
+					contador=0
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":[]}
+						lista[contador]['titulo']=registro[0]
+						lista[contador]['subtitulo']=registro[0]
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/exelente1.jpeg'
+						lista[contador]['boton'].append("Ver información de servicio "+registro[0])
+						contador=contador+1
+					return enviartarjetas(lista,origen)
+			except Error:
+				return msj(mensaje_error)
+		else:
+			return msj('habitaciones defauld')
 	if action=="action1_servicios_info":
 		habitaciones_servicios=variable('habitaciones_servicios')
 		return servicio_info(habitaciones_servicios)
