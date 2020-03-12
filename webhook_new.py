@@ -116,7 +116,7 @@ def results():
 					except IndexError:
 						return msj(mensaje_error)
 				else:
-					return msj('Ups no entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
 		except Error:
 			return msj(mensaje_error)
 	def albercas_hora(alberca):
