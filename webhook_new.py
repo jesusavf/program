@@ -522,6 +522,7 @@ def results():
 						return custom(msj(mensaje),'restaurantes',2,nombre_parametros,valores_parametros)
 			except Error:
 				return msj(mensaje_error)
+
 	def restaurantes_has_promocion_info(restaurantes):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
@@ -1090,6 +1091,51 @@ def results():
 						return msj("error de proceso")
 					else:
 						return msj("La habitacion "+habitacion+" tiene estos servicios: "+respuesta)
+			except Error:
+				return msj(mensaje_error)
+	
+	def habitaciones_has_promocion_list(habitacion):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		valores_parametros=[]
+		valores_parametros.append('habitacion')
+		valores_parametros.append('habitacion_promocion_list')
+		if origen=="FACEBOOK":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT habitaciones.nombre,promociones.nombre FROM habitaciones INNER JOIN promociones_habitaciones ON habitaciones.id_habitacion=promociones_habitaciones.habitacion_id INNER JOIN promociones ON promociones_habitaciones.promocion_id=promociones.id_promocion WHERE habitaciones.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(habitacion,))
+					respuesta=[]
+					for vestimenta in cursor:
+						respuesta.append('Promoción '+vestimenta[1])
+					if len(respuesta)==0:
+						return msj('Lo sentimos pero este restaurante no maneja promociones')
+					else:
+						return custom(respuestarapidafacebook("dentro de las promociones de este restaurante se encuentran estas opciones.",respuesta,origen,'color'),'habitacion',4,nombre_parametros,valores_parametros)
+			except Error:
+				return msj(mensaje_error)
+		else:
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT habitaciones.nombre,promociones.nombre FROM habitaciones INNER JOIN promociones_habitaciones ON habitaciones.id_habitacion=promociones_habitaciones.habitacion_id INNER JOIN promociones ON promociones_habitaciones.promocion_id=promociones.id_promocion WHERE habitaciones.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(habitacion,))
+					respuesta=""
+					contador=1
+					for vestimenta in cursor:
+						if contador==1:
+							respuesta='Promoción: '+vestimenta[1]
+						else:
+							respuesta='Promoción: '+vestimenta[1]
+					if respuesta=="":
+						return msj('Lo sentimos pero este restaurante no maneja promociones')
+					else:
+						mensaje="dentro de las promociones de este restaurante se encuentran estas opciones "+respuesta
+						return custom(msj(mensaje),'habitacion',2,nombre_parametros,valores_parametros)
 			except Error:
 				return msj(mensaje_error)
 	
@@ -2236,6 +2282,8 @@ def results():
 
 	if action=="action1.restaurante_has_promociones_list":
 		restaurantes=variable('restaurante')
+		if restaurantes=="":
+			return msj('Ups la promoción que esta buscando tal vez no exista.')
 		return restaurantes_has_promocion_list(restaurantes)
 
 	if action=="action1.restaurante_info_promocion_1":
@@ -2628,6 +2676,8 @@ def results():
 					return habitaciones_capacidad_maxima(habitaciones)
 				elif peticion=="camas":
 					return habitaciones_camas(habitaciones)
+				elif peticion=="habitacion_promocion_list":
+					return habitaciones_has_promocion_list(habitaciones)
 				else:
 					return msj("error 2")
 			else:
@@ -2652,6 +2702,8 @@ def results():
 					return habitaciones_capacidad_maxima(habitaciones)
 				elif peticion=="camas":
 					return habitaciones_camas(habitaciones)
+				elif peticion=="habitacion_promocion_list":
+					return habitaciones_has_promocion_list(habitaciones)
 				else:
 					return msj("error 2")
 			else:
@@ -2929,6 +2981,10 @@ def results():
 	if action=="action1.servicios_filtro":
 		habitaciones_servicios=variable('habitaciones_servicios')
 		return servisio_filtro(habitaciones_servicios)
+	
+	if action=="action1.habitaciones_has_promociones_list":
+		habitaciones=variable('habitaciones')
+		return habitaciones_has_promocion_list(habitaciones)
 	#endregion
 
 	#region actividades
