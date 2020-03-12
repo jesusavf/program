@@ -1,0 +1,24 @@
+st=""
+	for conteogeneral in a:
+		st=st+ conteogeneral['titulo']
+	return st
+restaurantes de a
+
+{
+  "facebook": {
+    "attachment": {
+      "type": "file",
+      "payload": {
+        "url": "https://www.redalyc.org/pdf/1932/193217832008.pdf"
+      }
+    }
+  }
+}
+
+primaryheader={}
+	primaryheader["po"]=request.headers["render"]
+	primaryheader["pa"]=request.headers["section"]
+	headercredencial={}
+	headercredencial["po"]='Zm9yIHRoaXMgc3lzdGVtIGluIHRoZWVlZWVlZSBob3RlbA'
+	headercredencial["pa"]='dGhpcyBpcyBhbiBhcGxpY2F0aW9uIGZvciBhIGhvdGVs'
+	lib.credenciales_cabeceras(primaryheader,headercredencial)
