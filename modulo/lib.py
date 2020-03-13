@@ -110,18 +110,20 @@ def lifetime(sesion,variable,txt=""): #verifica la existencia del custom o varia
     else:
         return ''#retorna un valor nulo
 
-def custom(metodo,variables,tiempodevida,parametros,numero):
+def custom(metodo,variables,tiempodevida,parametros,numero,*destroycustom):
     metodo=metodo[:-1]
     contador=1
     variable=', "outputContexts": [ { "name": "'
-    variable=variable+getsesion()+'/contexts/'+variables+'", '
+    sesion=getsesion()
+    variable=variable+sesion+'/contexts/'+variables+'", '
     variable=variable+'"lifespanCount": '+str(tiempodevida)
     if type(parametros)==str:
         if parametros!="":
             variable=variable+', "parameters": { "'+parametros+'":"'+numero+'", "'+parametros+'.original": "'+numero+'" } } ]}'
-            variable=variable+'"} } ]}'
+            variable=variable+'"} } '
         else:
-            variable=variable+' } ]}'
+            variable=variable+' } '
+        
     if type(parametros)==list:
         variable=variable+', "parameters": { "'
         contar=0
@@ -131,7 +133,11 @@ def custom(metodo,variables,tiempodevida,parametros,numero):
             else:
                 variable=variable+', "'+param+'":"'+numero[contador-1]+'", "'+param+'.original": "'+numero[contador-1]+'"'
             contador=contador+1
-        variable=variable+'} } ]}'
+        variable=variable+'} } '
+    if len(destroycustom)!=0:
+        for vaciar in destroycustom:
+            print("uno\n")
+    variable=variable+']}'
     return metodo+variable
         
 
