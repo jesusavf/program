@@ -16,8 +16,6 @@ import pusher
 import wikipedia
 import random
 from unicodedata import normalize #quitar acentos
-import pytz #detectar zona horaria
-from datetime import datetime #para acceder a la hora del sistema
 from money.money import Money
 from money.currency import Currency
 
