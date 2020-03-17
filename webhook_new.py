@@ -575,6 +575,186 @@ def results():
 			return msj(mensaje_error)
 	#endregion
 	#endregion
+	
+	#region actividades
+
+	#region actividadesbase
+	def actividades_informacion(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('informacion')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.descripcion,actividades.lugar,actividades.dia,actividades.horario FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" del lugar "+valor[2]+" abre el dia "+valor[3]+" Esta tiene un horario de "+valor[4]+".\nEsta consiste en:\n"+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+	
+	def actividades_descripcion(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('descripcion')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.descripcion FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" consiste en:\n"+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+	
+	def actividades_lugar(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('lugar')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.lugar FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" se festeja en: "+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+
+	def actividades_dia(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('dia')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.dia FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" Abre los días "+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+
+	def actividades_hora(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('hora')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.horario FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" abre desde las  "+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+	
+	def actividades_horario(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('horario')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre, actividades.dia, actividades.horario FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" abrirá desde los días "+valor[1]+" desde las horas de "+valor[2]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+
+	#endregion
+	#endregion
 	#region functions promociones()
 	def promociones_costo(nombre_promocion):
 		nombre_parametros=[]
@@ -1367,9 +1547,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('informacion')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1393,9 +1575,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('descripcion')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1418,9 +1602,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('cupo')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1443,9 +1629,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('salario')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1469,9 +1657,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('horario')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1494,9 +1684,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('ubicacion')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1519,9 +1711,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('rango-edad')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1544,9 +1738,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('sexo')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1635,7 +1831,7 @@ def results():
 			respuestas.append('Listar salones')
 			respuestas.append('Listar habitaciones')
 			respuestas.append('Listar vacantes')
-			#respuestas.append('Listar actividades')
+			respuestas.append('Listar actividades')
 			return respuestarapidafacebook('Hola buen amigo estoy para servirte desde esta pagina puedes preguntar lo que deses.',respuestas,origen,'color')
 		else:
 			return msj('Hola buen amigo estoy para servirte desde esta pagina puedes preguntar lo que deses. desde Listar albercas, Listar restaurantes y Listar salones')
@@ -2913,6 +3109,40 @@ def results():
 					return msj("error 2")
 			else:
 				return msj("error 1")
+	if action=="action2.actividad_contexo":
+		tipo=variable('tipo') #esta es para obtener el tipo de elemento
+		peticion=variable('peticion')
+		actividades=variable('actividades')
+		if origen=="FACEBOOK":
+			if tipo=="actividad":
+				if peticion=="informacion":
+					return actividades_informacion(actividades)
+				elif peticion=="descripcion":
+					return actividades_descripcion(actividades)
+				elif peticion=="lugar":
+					return actividades_lugar(actividades)
+				elif peticion=="dia":
+					return actividades_dia(actividades)
+				elif peticion=="hora":
+					return actividades_hora(actividades)
+				elif peticion=="horario":
+					return actividades_horario(actividades)
+		else:
+			if tipo=="actividad":
+				if peticion=="informacion":
+					return actividades_informacion(actividades)
+				elif peticion=="descripcion":
+					return actividades_descripcion(actividades)
+				elif peticion=="lugar":
+					return actividades_lugar(actividades)
+				elif peticion=="dia":
+					return actividades_dia(actividades)
+				elif peticion=="hora":
+					return actividades_hora(actividades)
+				elif peticion=="horario":
+					return actividades_horario(actividades)
+
+			
 	#endregion
 
 	#region demas
@@ -3195,6 +3425,43 @@ def results():
 					return msj(msjs)
 			except Error:
 				return msj(mensaje_error)
+
+	if action=="action1.actividad_informacion":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_informacion(actividades)
+	
+	if action=="action1.actividad_descripcion":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_descripcion(actividades)
+	
+	if action=="action1.actividad_lugar":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_lugar(actividades)
+	
+	if action=="action1.actividad_dia":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_dia(actividades)
+	
+	if action=="action1.actividad_hora":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_hora(actividades)
+
+	if action=="action1.actividad_horario":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_horario(actividades)
+
 	#endregion
 
 # creando ruta para que interactue con dialogflow
