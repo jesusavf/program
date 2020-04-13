@@ -75,7 +75,7 @@ def origenes():
     if req.get("originalDetectIntentRequest").get("payload").get("source"): #compruebo si existen
         return (req.get("originalDetectIntentRequest").get("payload").get("source").upper()) #si existen los combierto a mayusculas
     else:
-        frase = u'indefinido'
+        frase = 'indefinido'
         return frase.upper() #devuelvo el valor INDEFINIDO si no se encuentra ninguna plataforma
 
 #como tal se parese a origenes pero esta tiene como objetivo el de tomar el nombre de las instancias para compararlo
@@ -95,33 +95,46 @@ def getsesion(): #accede a la session de dialogflow
     else:
         return ''#devuelve valor nulo
 
-def lifetime(sesion,variable,txt=""): #verifica la existencia del custom o variable global
+def lifetime(variable): #verifica la existencia del custom o variable global
+    sesion=getsesion()
     req = request.get_json(force=True) #combierto los valores en un json
     if req.get('queryResult').get('outputContexts'):
         partes=req.get('queryResult').get('outputContexts')
-        txt="no"
+        txt=0
         sal=sesion+"/contexts/"+variable #concatena la sesion y la ariable
         contador=0 #genera un contador
         for part in partes: #cre un ciclo
             if req.get('queryResult').get('outputContexts')[contador].get('name')==sal: #verifica el nombre de la variabele
-                txt=req.get('queryResult').get('outputContexts')[contador].get('name') #retorna la variable
-        contador=contador+1 #genera un contador
+                txt=req.get('queryResult').get('outputContexts')[contador].get('lifespanCount') #retorna la variable
+            contador=contador+1 #genera un contador
+        if txt==None:
+            txt=0
         return txt #retorna un valor
+
     else:
         return ''#retorna un valor nulo
 
-def custom(metodo,variables,tiempodevida,parametros,numero):
+def comprobariddeip():
+    req = request.get_json(force=True)
+    if req.get("originalDetectIntentRequest").get("payload").get("applicationId"):
+        return req.get("originalDetectIntentRequest").get("payload").get("applicationId")
+    else:
+        return ''
+
+def custom(metodo,variables,tiempodevida,parametros,numero,*destroycustom):
     metodo=metodo[:-1]
     contador=1
     variable=', "outputContexts": [ { "name": "'
-    variable=variable+getsesion()+'/contexts/'+variables+'", '
+    sesion=getsesion()
+    variable=variable+sesion+'/contexts/'+variables+'", '
     variable=variable+'"lifespanCount": '+str(tiempodevida)
     if type(parametros)==str:
         if parametros!="":
             variable=variable+', "parameters": { "'+parametros+'":"'+numero+'", "'+parametros+'.original": "'+numero+'" } } ]}'
-            variable=variable+'"} } ]}'
+            variable=variable+'"} } '
         else:
-            variable=variable+' } ]}'
+            variable=variable+' } '
+        
     if type(parametros)==list:
         variable=variable+', "parameters": { "'
         contar=0
@@ -131,7 +144,21 @@ def custom(metodo,variables,tiempodevida,parametros,numero):
             else:
                 variable=variable+', "'+param+'":"'+numero[contador-1]+'", "'+param+'.original": "'+numero[contador-1]+'"'
             contador=contador+1
-        variable=variable+'} } ]}'
+        variable=variable+'} } '
+    if type(parametros)==dict:
+        variable=variable+', "parameters": { "'
+        contar=0
+        for param  in parametros:
+            if contador==1:
+                variable=variable+''+parametros[param]+'":"'+numero[param]+'", "'+parametros[param]+'.original": "'+numero[param]+'"'
+            else:
+                variable=variable+', "'+parametros[param]+'":"'+numero[param]+'", "'+parametros[param]+'.original": "'+numero[param]+'"'
+            contador=contador+1
+        variable=variable+'} } '
+    if len(destroycustom)!=0:
+        for vaciar in destroycustom:
+            print("uno\n")
+    variable=variable+']}'
     return metodo+variable
         
 
@@ -166,22 +193,11 @@ def imagen():
     else:
         return '' #no regreso ningun valor
 def obtenertipoarchivo():
-    try:
-        req = request.get_json(force=True) #combierto los valores en un json
-        inputtest=req.get('originalDetectIntentRequest').get('payload').get('data').get('message').get('text')
-        inputtest.encode('ascii', 'ignore').decode('ascii')
-        if inputtest=='':
-            return ''
-        else:
-            if req.get('originalDetectIntentRequest').get('payload').get('data').get('message').get('attachments')[0].get('type'):
-                return req.get('originalDetectIntentRequest').get('payload').get('data').get('message').get('attachments')[0].get('type')
-            else:
-                return ''
-    
-    except Exception as e:
+    req = request.get_json(force=True) #combierto los valores en un json
+    if req.get('originalDetectIntentRequest').get('payload').get('data').get('message').get('attachments')[0].get('type'):
+        return req.get('originalDetectIntentRequest').get('payload').get('data').get('message').get('attachments')[0].get('type')
+    else:
         return ''
-
-    return ''
 #endregion
 #endregion
 
@@ -230,7 +246,7 @@ def enviarimagenes(imagen,plataforma):
     elif type(imagen)==dict: #verifica si el elemento es un diccionario
         cadena='{"fulfillmentMessages":[' #crea una cadena de texto que ayuda al retorno del mensaje
         for img in imagen: #creo un conteo de las variables
-            cadena=cadena+'{"image":{"imageUri":"'+img+'"},"platform":"'+plataforma+'"},' # concateno la url de las imagenes a la cadena
+            cadena=cadena+'{"image":{"imageUri":"'+imagen[img]+'"},"platform":"'+plataforma+'"},' # concateno la url de las imagenes a la cadena
         cadena=cadena+'{"payload":{}}]}' # termino la cadena
         return cadena #regreso el valor
     else:
@@ -255,7 +271,7 @@ def rndenviarimagenes(imagen,plataforma,texto=''):
     elif type(imagen)==dict: #verifica si el elemento es un diccionario
         img=random.choice(list(imagen.values())) #toma un valor array del diccionario
     else:
-        exit() #sale del sistema
+        img=imagen
     cadena='{"fulfillmentMessages":[' #empieza la cadena
     cadena=cadena+'{"image":{"imageUri":"'+img+'"},"platform":"'+plataforma+'"},' # almacena la imagen
     cadena=cadena+'{"text": { "text": [ "'+str(txt)+'" ] },"platform":"'+plataforma+'"},' #crea el texto a no ser que no exista alguno
@@ -285,7 +301,7 @@ def enviartarjetas(tarjeta,plataforma):
     return cadena #regresa la cadena
 #
 def enviarrespuestasrapidas(repuestas,plataforma):
-    cadena='{ "fulfillmentMessages": [ { "quickReplies": { "title": "'+repuestas['titulo'][0]+'",  "quickReplies": [' #empieza la cadena
+    cadena='{ "fulfillmentMessages": [ { "quickReplies": { "title": "'+repuestas['titulo']+'",  "quickReplies": [' #empieza la cadena
     botones=repuestas['boton']#
     cadena_botones=''
     for botonesinfo in botones:
@@ -311,22 +327,49 @@ def enviarvideofacebook(url,plataforma):
           
     
 def respuestarapidafacebook(titulo,respuestas,plataforma,img=''):
+    if type(url)==dict:
+        titulo=random.choice(list(titulo.values()))
+    elif type(url)==list:
+        titulo=random.choice(titulo)
+    else:
+        titulo=titulo
     contador=1
     cadena='{ "fulfillmentMessages": [ { "text": { "text": [ "" ] }, "platform": "'+plataforma+'" },{ "payload": { "'+plataforma.lower()+'": { "text": "'+titulo+'", "quick_replies":['
-    if img=='color' or img=='colors':
-        color=[]
-        color.append('https://imgtoboot.000webhostapp.com/pack/azul.jpg')
-        color.append('https://imgtoboot.000webhostapp.com/pack/cafe.jpg')
-        color.append('https://imgtoboot.000webhostapp.com/pack/negro.jpg')
-        color.append('https://imgtoboot.000webhostapp.com/pack/rojo.jpg')
-        color.append('https://imgtoboot.000webhostapp.com/pack/rosa.jpg')
+    if type(img)==str:
+        if img=='color' or img=='colors' or img=="":
+            color=[]
+            color.append('https://imgtoboot.000webhostapp.com/pack/azul.jpg')
+            color.append('https://imgtoboot.000webhostapp.com/pack/cafe.jpg')
+            color.append('https://imgtoboot.000webhostapp.com/pack/negro.jpg')
+            color.append('https://imgtoboot.000webhostapp.com/pack/rojo.jpg')
+            color.append('https://imgtoboot.000webhostapp.com/pack/rosa.jpg')
+            if type(respuestas)==str:
+                color=random.choice(color)
+                cadena=cadena+'{ "content_type":"text",  "title":"'+respuestas+'",  "payload":"'+respuestas+'", "image_url":"'+color+'" }'
+                return cadena+'] } },"platform": "'+plataforma+'" }]}'
+
+            else:
+                random.shuffle(color)
+                contar=0
+                coma=1
+                numerodeelementos=len(color)-1
+                for resp in respuestas:
+                    if coma==2:
+                        cadena=cadena+', '
+                    cadena=cadena+'{ "content_type":"text",  "title":"'+resp+'",  "payload":"'+resp+'", "image_url":"'+color[contar]+'" }'
+                    contar=contar+1
+                    coma=2
+                    if contar>numerodeelementos:
+                        contar=0
+                return cadena+'] } },"platform": "'+plataforma+'" }]}'
+    elif type(img)==dict:
+        color=list(img.values())
         if type(respuestas)==str:
             color=random.choice(color)
             cadena=cadena+'{ "content_type":"text",  "title":"'+respuestas+'",  "payload":"'+respuestas+'", "image_url":"'+color+'" }'
             return cadena+'] } },"platform": "'+plataforma+'" }]}'
 
         else:
-            random.shuffle(color)
             contar=0
             coma=1
             numerodeelementos=len(color)-1
@@ -339,42 +382,28 @@ def respuestarapidafacebook(titulo,respuestas,plataforma,img=''):
                 if contar>numerodeelementos:
                     contar=0
             return cadena+'] } },"platform": "'+plataforma+'" }]}'
-
-
-    elif type(respuestas)==str:
-        cadena=cadena+'{ "content_type":"text",  "title":"'+respuestas+'",  "payload":"'+respuestas+'", "image_url":"'+img+'" }'
-        return cadena+'] } },"platform": "'+plataforma+'" }]}'
-    elif type(respuestas)==str and type(img)==list:
-        rndimg=random.choice(img.values())
-        cadena=cadena+'{ "content_type":"text",  "title":"'+respuestas+'",  "payload":"'+respuestas+'", "image_url":"'+rndimg+'" }'
-        return cadena+'] } },"platform": "'+plataforma+'" }]}'
-    elif type(respuestas)!=str and type(respuestas)!=str:
-        c=0
-        if len(respuestas)==len(img):
-            for respuestasasignadas in respuestas:
-                if contador==2:
-                    cadena=cadena+', '
-                cadena=cadena+'{ "content_type":"text",  "title":"'+respuestasasignadas+'",  "payload":"'+respuestasasignadas+'", "image_url":"'+img[c]+'" }'
-                contador=2
-                c=c+1
+    elif type(img)==list:
+        color=img
+        if type(respuestas)==str:
+            color=random.choice(color)
+            cadena=cadena+'{ "content_type":"text",  "title":"'+respuestas+'",  "payload":"'+respuestas+'", "image_url":"'+color+'" }'
             return cadena+'] } },"platform": "'+plataforma+'" }]}'
+
         else:
-            for respuestasasignadas in respuestas:
-                rndimg=random.choice(img)
-                if contador==2:
+            contar=0
+            coma=1
+            numerodeelementos=len(color)-1
+            for resp in respuestas:
+                if coma==2:
                     cadena=cadena+', '
-                cadena=cadena+'{ "content_type":"text",  "title":"'+respuestasasignadas+'",  "payload":"'+respuestasasignadas+'", "image_url":"'+rndimg+'" }'
-                contador=2
-                c=c+1
+                cadena=cadena+'{ "content_type":"text",  "title":"'+resp+'",  "payload":"'+resp+'", "image_url":"'+color[contar]+'" }'
+                contar=contar+1
+                coma=2
+                if contar>numerodeelementos:
+                    contar=0
             return cadena+'] } },"platform": "'+plataforma+'" }]}'
     else:
-        for respuestasasignadas in respuestas:
-            if contador==2:
-                cadena=cadena+', '
-            cadena=cadena+'{ "content_type":"text",  "title":"'+respuestasasignadas+'",  "payload":"'+respuestasasignadas+'", "image_url":"'+img+'" }'
-            contador=2
-        return cadena+'] } },"platform": "'+plataforma+'" }]}'
-    
+        msj("eror")
 def enviarurlfacebook(titulo,plataforma,url):
     c=1
     a= '{ "fulfillmentMessages": [ { "text": { "text": [ "" ] }, "platform": "'+plataforma+'" },{ "payload": { "'+plataforma.lower()+'": { "attachment": { "payload": {'
@@ -417,3 +446,116 @@ def enviarvideo(url,plataforma,texto=''):
     return '{ "fulfillmentMessages": [ { "text": { "text": [ "'+texto+'" ] }, "platform": "'+plataforma+'" },{ "payload": { "'+plataforma.lower()+'": { "attachment": { "payload": { "url": "'+url+'" },"type": "video" }}},"platform": "'+plataforma+'" }]}'
 #endregion
 #endregion
+
+#region segerenciagoogleactions
+
+def googlequickremplace(opciones,texto=""):
+    contador=0
+    if type(texto)==list: #comprueba si es un array para imprimir varias imagenes
+         texto=random.choice(texto) #toma un valor del array random
+    elif type(texto)==dict: #verifica si el elemento es un diccionario
+        texto=random.choice(list(texto.values())) #toma un valor array del diccionario
+    else:
+        texto=texto #toma dato del STRING
+    cadena='{"fulfillmentText": "'+texto+'", "fulfillmentMessages": [ { "platform": "ACTIONS_ON_GOOGLE", "simpleResponses": { "simpleResponses": [ { "textToSpeech": "'+texto+'" } ] } }, {"platform": "ACTIONS_ON_GOOGLE", "suggestions": { "suggestions": [ '
+    if type(opciones)==list: #comprueba si es un array para imprimir varias imagenes
+          for valores in opciones: #creo un conteo de las variables
+            if contador==0:
+                cadena=cadena+'{ "title": "'+valores+'" }'
+            else:
+                cadena=cadena+',{ "title": "'+valores+'" }'
+            contador=1
+    elif type(opciones)==dict: #verifica si el elemento es un diccionario
+        for valores in opciones: #creo un conteo de las variables
+            if contador==0:
+                cadena=cadena+'{ "title": "'+opciones[valores]+'" }'
+            else:
+                cadena=cadena+',{ "title": "'+opciones[valores]+'" }'
+            contador+=1
+    else:
+        cadena=cadena+'{ "title": "'+opciones+'" }'
+
+    cadena=cadena+']   } }, { "text": { "text": [ "'+texto+'" ] } } ]}' #regresa el json //posibles mensajes ejemplo: msj1,msj2,msj3
+    return cadena
+
+def kommunicatecarrousel(texto="",titulo=""):
+    contador=0
+    cadena='{ "fulfillmentMessages": [ { "platform": "ACTIONS_ON_GOOGLE", "simpleResponses": { "simpleResponses": [ { "textToSpeech": "'+texto+'" } ] } }, { "payload": { "platform": "kommunicate", "message": "'+texto+'", "metadata": { "contentType": "300", "payload":['
+    for cartas in titulo:
+        if contador==0:
+            contadorinterno=0
+            if "img" in titulo:
+                cadena=cadena+'{"header": { "overlayText": "'+titulo[cartas]["costo"]+'", "imgSrc": "'+titulo[cartas]["img"]+'" }, "title": "'+titulo[cartas]["titulo"]+'", "titleExt": "'+titulo[cartas]["calidad"]+'", "subtitle": "'+titulo[cartas]["sub"]+'", "description": "'+titulo[cartas]["descripcion"]+'"'
+            else:
+                try:
+                    cadena=cadena+'{"header": { "overlayText": "'+titulo[cartas]["costo"]+'", "imgSrc": "'+titulo[cartas]["img"]+'" }, "title": "'+titulo[cartas]["titulo"]+'", "titleExt": "'+titulo[cartas]["calidad"]+'", "subtitle": "'+titulo[cartas]["sub"]+'", "description": "'+titulo[cartas]["descripcion"]+'"'
+                except KeyError:
+                    cadena=cadena+'{"header": { "overlayText": "'+titulo[cartas]["costo"]+'", "imgSrc": "http://www.tollesonhotels.com/wp-content/uploads/2017/03/hotel-room.jpg" }, "title": "'+titulo[cartas]["titulo"]+'", "titleExt": "'+titulo[cartas]["calidad"]+'", "subtitle": "'+titulo[cartas]["sub"]+'", "description": "'+titulo[cartas]["descripcion"]+'"'
+            boton=titulo[cartas]["boton"]
+            cadena=cadena+', "buttons": ['
+            for botones in boton:
+                print(boton[botones][1])
+                if boton[botones][1]=="web":
+                    if contadorinterno==0:
+                        cadena=cadena+' { "name": "'+boton[botones][0]+'", "action": { "payload": { "url": "'+boton[botones][2]+'" }, "type": "link" } }'
+                    else:
+                        cadena=cadena+', { "name": "'+boton[botones][0]+'", "action": { "payload": { "url": "'+boton[botones][2]+'" }, "type": "link" } }'
+                if boton[botones][1]=="submit":
+                    if contadorinterno==0:
+                        cadena=cadena+'{ "name": "'+boton[botones][0]+'", "action": { "payload": { "replyMetadata": { "key1": "value1" }, "message": "'+boton[botones][0]+'" }, "type": "quickReply" } }'
+                    else:
+                        cadena=cadena+',{ "name": "'+boton[botones][0]+'", "action": { "payload": { "replyMetadata": { "key1": "value1" }, "message": "'+boton[botones][0]+'" }, "type": "quickReply" } }'
+         
+                contadorinterno=contadorinterno+1
+            cadena=cadena+'] }'
+            #cadena=cadena+'{ "name": "Suggested Reply", "action": { "payload": { "replyMetadata": { "key1": "value1" }, "message": "text will be sent as message" }, "type": "quickReply" } } ]'
+        else:
+            contadorinterno=0
+            cadena=cadena+',{"header": { "overlayText": "'+titulo[cartas]["costo"]+'", "imgSrc": "'+titulo[cartas]["img"]+'" }, "title": "'+titulo[cartas]["titulo"]+'", "titleExt": "'+titulo[cartas]["calidad"]+'", "subtitle": "'+titulo[cartas]["sub"]+'", "description": "'+titulo[cartas]["descripcion"]+'"'
+            boton=titulo[cartas]["boton"]
+            cadena=cadena+', "buttons": ['
+            for botones in boton:
+                print(boton[botones][1])
+                if boton[botones][1]=="web":
+                    if contadorinterno==0:
+                        cadena=cadena+' { "name": "'+boton[botones][0]+'", "action": { "payload": { "url": "'+boton[botones][2]+'" }, "type": "link" } }'
+                    else:
+                        cadena=cadena+', { "name": "'+boton[botones][0]+'", "action": { "payload": { "url": "'+boton[botones][2]+'" }, "type": "link" } }'
+                if boton[botones][1]=="submit":
+                    if contadorinterno==0:
+                        cadena=cadena+'{ "name": "'+boton[botones][0]+'", "action": { "payload": { "replyMetadata": { "key1": "value1" }, "message": "'+boton[botones][0]+'" }, "type": "quickReply" } }'
+                    else:
+                        cadena=cadena+',{ "name": "'+boton[botones][0]+'", "action": { "payload": { "replyMetadata": { "key1": "value1" }, "message": "'+boton[botones][0]+'" }, "type": "quickReply" } }'
+         
+                contadorinterno=contadorinterno+1
+            cadena=cadena+'] }'
+            #cadena=cadena+'{ "name": "Suggested Reply", "action": { "payload": { "replyMetadata": { "key1": "value1" }, "message": "text will be sent as message" }, "type": "quickReply" } } ]'
+        contador=contador+1
+    cadena=cadena+'], "templateId": "10" } } }'
+    cadena=cadena+'] }'
+    return cadena
+
+def kommunicaterndimg(imagen,texto="",caption=""):
+    if type(imagen)==list:
+        imagen=random.choice(imagen)
+    elif type(imagen)==dict:
+        imagen=random.choice(list(imagen.values()))
+    else:
+        imagen=imagen
+    if type(texto)==list:
+        texto=random.choice(texto)
+    elif type(texto)==dict:
+        texto=random.choice(list(texto.values()))
+    else:
+        texto=texto
+
+    if type(caption)==list:
+        caption=random.choice(caption)
+    elif type(caption)==dict:
+        caption=random.choice(list(caption.values()))
+    else:
+        caption=caption
+
+    return '{ "fulfillmentMessages": [ { "payload": { "metadata": { "templateId": "9", "contentType": "300", "payload": [ { "url": "'+imagen+'", "caption": "'+caption+'" } ] }, "platform": "kommunicate", "message": "'+texto+'" }, "platform": "ACTIONS_ON_GOOGLE" }, { "platform": "ACTIONS_ON_GOOGLE", "simpleResponses": { "simpleResponses": [ { "textToSpeech": "'+texto+'" } ] } }, { "payload": { "metadata": { "templateId": "9", "contentType": "300", "payload": [ { "caption": "'+caption+'", "url": "'+imagen+'" } ] }, "platform": "kommunicate", "message": "'+texto+'" } } ] }'
+#endregion
+
