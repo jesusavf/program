@@ -1,1 +1,2 @@
-dialogfow_programming_for_cicese
+instala.<br>
+pip install py-money
