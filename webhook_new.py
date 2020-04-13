@@ -16,8 +16,6 @@ import pusher
 import wikipedia
 import random
 from unicodedata import normalize #quitar acentos
-import pytz #detectar zona horaria
-from datetime import datetime #para acceder a la hora del sistema
 from money.money import Money
 from money.currency import Currency
 
@@ -41,13 +39,14 @@ db_filename = 'bd_hoteld.s3db'#guardar variables en variable.
 def results():
 	
 	#region requerimientos
-	from modulo.lib import credenciales_cabeceras,credenciales,origenes,variable
+	from modulo.lib import credenciales_cabeceras,credenciales,origenes,variable,comprobariddeip
 	from modulo.lib import instancia,getsesion,lifetime,custom
-	from modulo.lib import variable,texto,imagen,obtenertipoarchivo,variable
+	from modulo.lib import texto,imagen,obtenertipoarchivo,variablerandom
 	from modulo.lib import msj
 	from modulo.lib import enviarimagenes,rndenviarimagenes,enviartarjetas,enviarrespuestasrapidas
 	from modulo.lib import enviarvideofacebook,respuestarapidafacebook,enviarurlfacebook,enviarpdf_audio_video
-
+	from modulo.lib import googlequickremplace
+	from modulo.lib import kommunicatecarrousel,kommunicaterndimg
 	req    =    request.get_json(force=True)
 	
 	# En la variable req se guardara la peticion que devolvera datos en formato json, extraidos de dialogflow.
@@ -64,6 +63,8 @@ def results():
 	headercredencial.append('dGhpcyBpcyBhbiBhcGxpY2F0aW9uIGZvciBhIGhvdGVs')
 	credenciales_cabeceras(primaryheader,headercredencial)
 	mensaje_error='No hemos podido contactarnos con usted espere un momento, si el error persiste contáctenos al (numero)'
+	idaplication=comprobariddeip()
+
 	#endregion
 	
 	
@@ -73,6 +74,7 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('alberca')
 		valores_parametros=[]
 		valores_parametros.append('albercas')
 		valores_parametros.append('profundidad')
@@ -86,7 +88,10 @@ def results():
 				vestimenta=cursor.fetchone()
 				if vestimenta!=None:
 					try:
-						return custom(msj('La alberca '+vestimenta[0]+" tiene una profundidad  de "+str(vestimenta[1])),'albercas',2,nombre_parametros,valores_parametros)
+						if vestimenta[1]==1:
+							return custom(msj('La alberca '+vestimenta[0]+" tiene una profundidad  de "+str(vestimenta[1])+" metro."),'albercas',2,nombre_parametros,valores_parametros)
+						else:
+							return custom(msj('La alberca '+vestimenta[0]+" tiene una profundidad  de "+str(vestimenta[1]).replace(".0","")+" metros."),'albercas',2,nombre_parametros,valores_parametros)
 					except IndexError:
 						return msj(mensaje_error)
 				else:
@@ -97,9 +102,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('alberca')
 		valores_parametros=[]
 		valores_parametros.append('albercas')
 		valores_parametros.append('horario')
+		valores_parametros.append(alberca)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 					
@@ -116,16 +123,18 @@ def results():
 					except IndexError:
 						return msj(mensaje_error)
 				else:
-					return msj('Ups no entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
+					return msj('No entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
 		except Error:
 			return msj(mensaje_error)
 	def albercas_hora(alberca):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('alberca')
 		valores_parametros=[]
 		valores_parametros.append('albercas')
 		valores_parametros.append('hora')
+		valores_parametros.append(alberca)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 					
@@ -142,13 +151,14 @@ def results():
 					except IndexError:
 						return msj(mensaje_error)
 				else:
-					return msj('Ups no entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
+					return msj('No entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
 		except Error:
 			return msj(mensaje_error)
 	def albercas_dias(alberca):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('alberca')
 		valores_parametros=[]
 		valores_parametros.append('albercas')
 		valores_parametros.append('dias')
@@ -162,7 +172,7 @@ def results():
 				valor=cursor.fetchone()
 				if valor!=None:
 					try:
-						mensaje='La alberca '+valor[0]+" abre los días "+valor[1]
+						mensaje='La alberca '+valor[0]+" abre los días: "+valor[1]
 						return custom(msj(mensaje),'albercas',2,nombre_parametros,valores_parametros)
 					except IndexError:
 						return msj(mensaje_error)
@@ -174,6 +184,8 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+
+		nombre_parametros.append('alberca')
 		valores_parametros=[]
 		valores_parametros.append('albercas')
 		valores_parametros.append('edad_ingreso')
@@ -200,6 +212,7 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('alberca')
 		valores_parametros=[]
 		valores_parametros.append('albercas')
 		valores_parametros.append('informacion')
@@ -213,7 +226,7 @@ def results():
 				apertura=cursor.fetchone()
 				if apertura!=None:
 					try:
-						mensaje="Alberca: "+apertura[0]+"\nEdad de ingreso:"+apertura[1]+"\nDías de apertura: "+apertura[2]+"\nHorario: "+apertura[3]+"\nProfundidad: "+str(apertura[4])+"\nVestimenta: "+apertura[5]
+						mensaje="Alberca: "+apertura[0]+"\nEdad de ingreso: "+apertura[1]+"\nDías de apertura: "+apertura[2]+"\nHorario: "+apertura[3]+"\nProfundidad: "+str(apertura[4])+"m\nVestimenta: "+apertura[5]
 						return custom(msj(mensaje),'albercas',2,nombre_parametros,valores_parametros)
 					except IndexError:
 						return msj(mensaje_error)
@@ -225,6 +238,7 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('alberca')
 		valores_parametros=[]
 		valores_parametros.append('albercas')
 		valores_parametros.append('oferta')
@@ -238,7 +252,7 @@ def results():
 					apertura=cursor.fetchone()
 					if apertura!=None:
 						try:
-							mensaje="La alberca "+apertura[0]+" ofrece servicio a personas desde  "+apertura[1]+" con días de apertura de "+apertura[2]+" desde "+apertura[3]+" con una profundidad de "+str(apertura[4])+" la cual lleva una vestimenta "+apertura[5]+"."
+							mensaje="La alberca "+apertura[0]+" ofrece servicio a personas desde "+apertura[1]+" con días de apertura de "+apertura[2]+" desde "+apertura[3]+" con una profundidad de "+str(apertura[4])+" la cual lleva una vestimenta "+apertura[5]+"."
 							return custom(msj(mensaje),'albercas',2,nombre_parametros,valores_parametros)
 						except IndexError:
 							return msj(mensaje_error)
@@ -250,6 +264,7 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('alberca')
 		valores_parametros=[]
 		valores_parametros.append('albercas')
 		valores_parametros.append('vestimenta')
@@ -269,7 +284,7 @@ def results():
 						except IndexError:
 							return msj(mensaje_error)
 					else:
-						return msj('Posiblemente el nombre este mal por favor vuelva a intentarlo')
+						return msj('Posiblemente el nombre de la alberca este mal por favor vuelva a intentarlo')
 		except Error:
 			return msj(mensaje_error)
 	#endregion
@@ -278,9 +293,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('restaurantes')
 		valores_parametros=[]
 		valores_parametros.append('restaurantes')
 		valores_parametros.append('descripcion')
+		valores_parametros.append(restaurantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -291,7 +308,7 @@ def results():
 				if vestimenta!=None:
 					try:
 						mensaje=vestimenta[0]
-						return custom(msj(mensaje),'restaurantes',2,nombre_parametros,valores_parametros)
+						return custom(msj(mensaje),'restaurantes',2,nombre_parametros,valores_parametros,"uno","dos","tres")
 					except IndexError:
 						return msj(mensaje_error)
 				else:
@@ -302,9 +319,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('restaurantes')
 		valores_parametros=[]
 		valores_parametros.append('restaurantes')
 		valores_parametros.append('dias')
+		valores_parametros.append(restaurantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -326,9 +345,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('restaurantes')
 		valores_parametros=[]
 		valores_parametros.append('restaurantes')
 		valores_parametros.append('edad_ingreso')
+		valores_parametros.append(restaurantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -353,9 +374,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('restaurantes')
 		valores_parametros=[]
 		valores_parametros.append('restaurantes')
 		valores_parametros.append('hora_apertura')
+		valores_parametros.append(restaurantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -377,9 +400,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('restaurantes')
 		valores_parametros=[]
 		valores_parametros.append('restaurantes')
 		valores_parametros.append('horario')
+		valores_parametros.append(restaurantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -401,9 +426,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('restaurantes')
 		valores_parametros=[]
 		valores_parametros.append('restaurantes')
 		valores_parametros.append('precio')
+		valores_parametros.append(restaurantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -425,9 +452,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('restaurantes')
 		valores_parametros=[]
 		valores_parametros.append('restaurantes')
 		valores_parametros.append('vestimenta')
+		valores_parametros.append(restaurantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -449,26 +478,24 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('restaurantes')
 		valores_parametros=[]
 		valores_parametros.append('restaurantes')
 		valores_parametros.append('informacion')
+		valores_parametros.append(restaurantes2)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
 				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
-				query = "SELECT count(nombre) FROM restaurantes WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(nombre),'á','a'), 'é','e'),'í','i'),'ó','o'),'ú','u'),'à','a'),'ì','i')=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
-				cursor.execute(query,(restaurantes2.lower(),))
-				valor=cursor.fetchone()
-				if valor[0]==1:
-					query = "SELECT restaurantes.nombre,restaurantes.tipo,restaurantes.descripcion,restaurantes.dia,restaurantes.edad_ingreso,restaurantes.horario FROM restaurantes WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(nombre),'á','a'), 'é','e'),'í','i'),'ó','o'),'ú','u'),'à','a'),'ì','i')=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
-					cursor.execute(query,(restaurantes2.lower(),))
-				else:
-					query = "SELECT restaurantes.nombre,restaurantes.tipo,restaurantes.descripcion,restaurantes.dia,restaurantes.edad_ingreso,restaurantes.horario FROM restaurantes WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(nombre),'á','a'), 'é','e'),'í','i'),'ó','o'),'ú','u'),'à','a'),'ì','i') LIKE ? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
-					cursor.execute(query,('%'+restaurantes2.lower()+'%',))
+				query = "SELECT restaurantes.nombre,restaurantes.tipo,restaurantes.descripcion,restaurantes.dia,restaurantes.edad_ingreso,restaurantes.horario FROM restaurantes WHERE nombre=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(restaurantes2,))
 				vestimenta=cursor.fetchone()
 				if vestimenta!=None:
 					try:
-						mensaje='El restaurante '+vestimenta[0]+"\nDe tipo "+vestimenta[1]+"\nabre los dias "+vestimenta[3]+" con un horario de "+vestimenta[5]+"\nTiene una edad de ingreso de "+vestimenta[4]+"\nDescripción: \n"+vestimenta[2]
+						if vestimenta[4]=="familiar":
+							mensaje='El restaurante '+vestimenta[0]+"\nDe tipo "+vestimenta[1]+"\nabre los dias "+vestimenta[3]+" con un horario de "+vestimenta[5]+"\nTiene una edad de ingreso familiar.\nDescripción: \n"+vestimenta[2]
+						else:
+							mensaje='El restaurante '+vestimenta[0]+"\nDe tipo "+vestimenta[1]+"\nabre los dias "+vestimenta[3]+" con un horario de "+vestimenta[5]+"\nTiene una edad de ingreso de "+vestimenta[4]+".\nDescripción: \n"+vestimenta[2]
 						return custom(msj(mensaje),'restaurantes',2,nombre_parametros,valores_parametros)
 					except IndexError:
 						return msj(mensaje_error)
@@ -497,6 +524,26 @@ def results():
 						respuesta.append('Promoción '+vestimenta[1])
 					if len(respuesta)==0:
 						return msj('Lo sentimos pero este restaurante no maneja promociones')
+					elif idaplication!="":
+							return custom(googlequickremplace(respuesta,"dentro de las promociones de este restaurante se encuentran estas opciones."),'restaurantes',4,nombre_parametros,valores_parametros)
+					else:
+						return custom(respuestarapidafacebook("dentro de las promociones de este restaurante se encuentran estas opciones.",respuesta,origen,'color'),'restaurantes',4,nombre_parametros,valores_parametros)
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT restaurantes.nombre,promociones.nombre FROM restaurantes INNER JOIN promociones_restaurantes ON restaurantes.id_restaurante=promociones_restaurantes.restaurante_id INNER JOIN promociones ON promociones_restaurantes.promocion_id=promociones.id_promocion WHERE restaurantes.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(restaurantes,))
+					respuesta=[]
+					for vestimenta in cursor:
+						respuesta.append('Promoción '+vestimenta[1])
+					if len(respuesta)==0:
+						return msj('Lo sentimos pero este restaurante no maneja promociones')
+					elif idaplication!="":
+							return custom(googlequickremplace(respuesta,"dentro de las promociones de este restaurante se encuentran estas opciones."),'restaurantes',4,nombre_parametros,valores_parametros)
 					else:
 						return custom(respuestarapidafacebook("dentro de las promociones de este restaurante se encuentran estas opciones.",respuesta,origen,'color'),'restaurantes',4,nombre_parametros,valores_parametros)
 			except Error:
@@ -522,13 +569,16 @@ def results():
 						return custom(msj(mensaje),'restaurantes',2,nombre_parametros,valores_parametros)
 			except Error:
 				return msj(mensaje_error)
+
 	def restaurantes_has_promocion_info(restaurantes):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('promociones')
 		valores_parametros=[]
 		valores_parametros.append('promocion')
 		valores_parametros.append('info-promocion')
+		valores_parametros.append(restaurantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -545,14 +595,196 @@ def results():
 			return msj(mensaje_error)
 	#endregion
 	#endregion
+	
+	#region actividades
+
+	#region actividadesbase
+	def actividades_informacion(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('informacion')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.descripcion,actividades.lugar,actividades.dia,actividades.horario FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" del lugar "+valor[2]+" abre el dia "+valor[3]+" Esta tiene un horario de "+valor[4]+".\nEsta consiste en:\n"+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+	
+	def actividades_descripcion(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('descripcion')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.descripcion FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" consiste en:\n"+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+	
+	def actividades_lugar(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('lugar')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.lugar FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" se festeja en: "+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+
+	def actividades_dia(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('dia')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.dia FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" Abre los días "+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+
+	def actividades_hora(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('hora')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre,actividades.horario FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" abre desde las  "+valor[1]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+	
+	def actividades_horario(actividades):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('actividades')
+		valores_parametros=[]
+		valores_parametros.append('actividad')
+		valores_parametros.append('horario')
+		valores_parametros.append(actividades)
+		try:
+			with sqlite3.connect(db_filename) as conn:#creamos la conección.
+				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+				query = "SELECT actividades.nombre, actividades.dia, actividades.horario FROM actividades WHERE actividades.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+				cursor.execute(query,(actividades,))#ejecutamos el query.
+				valor =cursor.fetchone()
+				if valor!=None:
+					try:
+						print(valor)
+						mensaje='La actividad '+valor[0]+" abrirá desde los días "+valor[1]+" desde las horas de "+valor[2]
+						return custom(msj(mensaje),'actividades',2,nombre_parametros,valores_parametros)
+					except IndexError:
+						return msj(mensaje_error)
+				else:
+					return msj('Up no entiendo que a que alberca te refieres.\nPuedes escribir actividad seguido del nombre para recordarlo')
+					return msj(msjs)
+		except Error:
+			return msj(mensaje_error)
+
+	#endregion
+	#endregion
 	#region functions promociones()
 	def promociones_costo(nombre_promocion):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('promociones')
 		valores_parametros=[]
 		valores_parametros.append('promocion')
 		valores_parametros.append('costo')
+		valores_parametros.append(nombre_promocion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -571,13 +803,16 @@ def results():
 					return msj('Ups no reconozco el restaurante indicado podrías repetírmelo')
 		except Error:
 			return msj(mensaje_error)
+
 	def promociones_all_data(nombre_promocion):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('promociones')
 		valores_parametros=[]
 		valores_parametros.append('promocion')
 		valores_parametros.append('all-data')
+		valores_parametros.append(nombre_promocion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -597,9 +832,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('promociones')
 		valores_parametros=[]
 		valores_parametros.append('promocion')
 		valores_parametros.append('descripcion')
+		valores_parametros.append(nombre_promocion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -621,9 +858,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('promociones')
 		valores_parametros=[]
 		valores_parametros.append('promocion')
 		valores_parametros.append('dia')
+		valores_parametros.append(nombre_promocion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -645,9 +884,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('promociones')
 		valores_parametros=[]
 		valores_parametros.append('promocion')
 		valores_parametros.append('fechas')
+		valores_parametros.append(nombre_promocion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -669,9 +910,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('promociones')
 		valores_parametros=[]
 		valores_parametros.append('promocion')
 		valores_parametros.append('horario')
+		valores_parametros.append(nombre_promocion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -693,9 +936,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('promociones')
 		valores_parametros=[]
 		valores_parametros.append('promocion')
 		valores_parametros.append('tipos')
+		valores_parametros.append(nombre_promocion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -719,114 +964,243 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('salones')
 		nombre_parametros.append('clasificacion')
+
 		valores_parametros=[]
 		valores_parametros.append('salon')
 		valores_parametros.append('capacidad_personas')
+		valores_parametros.append(salones)
 		valores_parametros.append(clasificacion)
-		try:
-			with sqlite3.connect(db_filename) as conn:#creamos la conección.
-				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
-				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
-				query = "select configuraciones_salones.cantidad_personas FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? and configuraciones.nombre=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
-				cursor.execute(query,(salones,clasificacion,))
-				valor=cursor.fetchone()
-				if valor!=None:
-					mensaje="El salon " + salones+" para "+clasificacion+" tiene una capacidad de personas de "+str(valor[0])+" personas."
-					return custom(msj(mensaje),'salon',2,nombre_parametros,valores_parametros)
-				else:
-					return msj("No hay ningún resultado.")
-		except Error:
-				return msj(mensaje_error)
+		if clasificacion=="" or clasificacion=="todo":
+			try:
+				
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "select configuraciones.nombre FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? LIMIT 4" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(salones,))
+					mensaje="El salón " + salones+" cuenta con estas configuraciones "
+					resp=""
+					respuesta=[]
+					for valor in cursor:
+						respuesta.append("Tipo "+valor[0])
+						if resp=="":
+							resp=valor[0]
+						else:
+							resp=resp+", "+valor[0]
+					if len(respuesta)==0:
+						return msj("El salón no tiene clasificaciones de costo")
+					else:
+						if origen=="FACEBOOK":
+							return custom(respuestarapidafacebook(mensaje,respuesta,origen,'color'),'salon',2,nombre_parametros,valores_parametros)
+						elif idaplication!="":
+							return custom(googlequickremplace(respuesta,mensaje),'salon',2,nombre_parametros,valores_parametros)
+						else:
+							return custom(msj(mensaje+": "+resp),'salon',2,nombre_parametros,valores_parametros)
+			except Error:
+					return msj(mensaje_error)
+		else:
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "select configuraciones_salones.cantidad_personas FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? and configuraciones.nombre=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(salones,clasificacion,))
+					valor=cursor.fetchone()
+					if valor!=None:
+						mensaje="El salón " + salones+" para "+clasificacion+" tiene una capacidad de personas de "+str(valor[0])+" personas."
+						return custom(msj(mensaje),'salon',2,nombre_parametros,valores_parametros)
+					else:
+						return msj("No hay ningún resultado.")
+			except Error:
+					return msj(mensaje_error)
+
 	def salones_hora_extra(salones,clasificacion):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('salones')
 		nombre_parametros.append('clasificacion')
 		valores_parametros=[]
 		valores_parametros.append('salon')
 		valores_parametros.append('hora_extra')
+		valores_parametros.append(salones)
 		valores_parametros.append(clasificacion)
-		try:
-			with sqlite3.connect(db_filename) as conn:#creamos la conección.
-				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
-				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
-				query = "select configuraciones_salones.hora_extra FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? and configuraciones.nombre=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
-				cursor.execute(query,(salones,clasificacion,))
-				valor=cursor.fetchone()
-				if valor!=None:
-					m=Money(valor[0], Currency.USD).format('en_US')
-					mensaje="El salon " + salones+" para "+clasificacion+" tiene un precio por hora extra de "+m+"."
-					return custom(msj(mensaje),'salon',2,nombre_parametros,valores_parametros)
-				else:
-					return msj("No hay ningún resultado.")
-		except Error:
-			return msj(mensaje_error)
+		if clasificacion=="" or clasificacion=="todo":
+			try:
+				
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "select configuraciones.nombre FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? LIMIT 4" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(salones,))
+					mensaje="El salón " + salones+" cuenta con estas configuraciones "
+					respuesta=[]
+					resp=""
+					for valor in cursor:
+						respuesta.append("Tipo "+valor[0])
+						if resp=="":
+							resp=valor[0]
+						else:
+							resp=resp+", "+valor[0]
+					if len(respuesta)==0:
+						return msj("Ups el salón no tiene clasificaciones de costo")
+					else:
+						if origen=="FACEBOOK":
+							return custom(respuestarapidafacebook(mensaje,respuesta,origen,'color'),'salon',2,nombre_parametros,valores_parametros)
+						elif idaplication!="":
+							return custom(googlequickremplace(respuesta,mensaje),'salon',2,nombre_parametros,valores_parametros)
+						else:
+							return custom(msj(mensaje+": "+resp),'salon',2,nombre_parametros,valores_parametros)
+			except Error:
+					return msj(mensaje_error)
+
+		else:
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "select configuraciones_salones.hora_extra FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? and configuraciones.nombre=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(salones,clasificacion,))
+					valor=cursor.fetchone()
+					if valor!=None:
+						m=Money(valor[0], Currency.USD).format('en_US')
+						mensaje="El salón " + salones+" para "+clasificacion+" tiene un precio por hora extra de "+m+"."
+						return custom(msj(mensaje),'salon',2,nombre_parametros,valores_parametros)
+					else:
+						return msj("No hay ningún resultado.")
+			except Error:
+				return msj(mensaje_error)
 	def salones_informacion(salones,clasificacion):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('salones')
 		nombre_parametros.append('clasificacion')
 		valores_parametros=[]
 		valores_parametros.append('salon')
 		valores_parametros.append('informacion')
+		valores_parametros.append(salones)
 		valores_parametros.append(clasificacion)
-		try:
-			with sqlite3.connect(db_filename) as conn:#creamos la conección.
-				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
-				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
-				query = "select salones.nombre,configuraciones_salones.cantidad_personas,configuraciones_salones.precio,configuraciones_salones.hora_extra,configuraciones.nombre FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? LIMIT 4" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
-				cursor.execute(query,(salones,))
-				respuesta=""
-				primervalor=""
-				for registro in cursor:
-					if respuesta=="":
-						respuesta="El salon " + registro[0]
-						primervalor=registro[0]
-						m=Money(registro[2], Currency.USD).format('en_US')
-						m2=Money(registro[3], Currency.USD).format('en_US')
-						respuesta=respuesta+"\n👉tiene una capacidad de personas de \n"+str(registro[1]) +" y maneja tarifas desde "+str(m)+" para "+registro[4]+" con un cobro por hora extra de "+str(m2)
-					else:
-						respuesta=respuesta+"\n👉tiene una capacidad de personas de \n"+str(registro[1]) +" y maneja tarifas desde "+str(m)+" para "+registro[4]+" con un cobro por hora extra de "+str(m2)
-			if respuesta=="":
-				return msj("No hay ningún resultado.")
-			else:
-				return custom(msj(respuesta),'salon',2,nombre_parametros,valores_parametros)
-		except Error:
-			return msj(mensaje_error)
+		if clasificacion!="todo" or clasificacion=="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "select salones.nombre,configuraciones_salones.cantidad_personas,configuraciones_salones.precio,configuraciones_salones.hora_extra,configuraciones.nombre FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? AND configuraciones.nombre=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(salones,clasificacion,))
+					respuesta=""
+					primervalor=""
+					for registro in cursor:
+						if respuesta=="":
+							respuesta="El salon " + registro[0]
+							primervalor=registro[0]
+							m=Money(registro[2], Currency.USD).format('en_US')
+							m2=Money(registro[3], Currency.USD).format('en_US')
+							respuesta=respuesta+"\n👉tiene una capacidad de personas de \n"+str(registro[1]) +" y maneja tarifas desde "+str(m)+" para "+registro[4]+" con un cobro por hora extra de "+str(m2)
+						else:
+							respuesta=respuesta+"\n👉tiene una capacidad de personas de \n"+str(registro[1]) +" y maneja tarifas desde "+str(m)+" para "+registro[4]+" con un cobro por hora extra de "+str(m2)
+				if respuesta=="":
+					return msj("No hay ningún resultado.")
+				else:
+					return custom(msj(respuesta),'salon',2,nombre_parametros,valores_parametros)
+			except Error:
+				return msj(mensaje_error)
+		else:
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+						conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+						cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+						query = "select configuraciones.nombre FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? LIMIT 4" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+						cursor.execute(query,(salones,))
+						mensaje="El salón " + salones+" cuenta con estas configuraciones "
+						respuesta=[]
+						resp=""
+						for valor in cursor:
+							respuesta.append("Tipo "+valor[0])
+							if resp=="":
+								resp=valor[0]
+							else:
+								resp=resp+", "+valor[0]
+						if len(respuesta)==0:
+							return msj("Ups el salon no tiene clasificaciones de costo")
+						else:
+							if origen=="FACEBOOK":
+								return custom(respuestarapidafacebook(mensaje,respuesta,origen,'color'),'salon',2,nombre_parametros,valores_parametros)
+							elif idaplication!="":
+								return custom(googlequickremplace(respuesta,mensaje),'salon',2,nombre_parametros,valores_parametros)
+							else:
+								return custom(msj(mensaje+": "+resp),'salon',2,nombre_parametros,valores_parametros)
+			except Error:
+				return msj(mensaje_error)
 	def salones_precio(salones,clasificacion):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('salones')
 		nombre_parametros.append('clasificacion')
 		valores_parametros=[]
 		valores_parametros.append('salon')
 		valores_parametros.append('precio')
+		valores_parametros.append(salones)
 		valores_parametros.append(clasificacion)
-		try:
-			with sqlite3.connect(db_filename) as conn:#creamos la conección.
-				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
-				cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
-				query = "select configuraciones_salones.precio FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? and configuraciones.nombre=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
-				cursor.execute(query,(salones,clasificacion,))
-				valor=cursor.fetchone()
-				if valor!=None:
-					m=Money(valor[0], Currency.USD).format('en_US')
-					mensaje="El salon " + salones+" para "+clasificacion+" tiene un precio de "+m+"."
-					return custom(msj(mensaje),'salon',2,nombre_parametros,valores_parametros)
-				else:
-					return msj("No hay ningún resultado.")
-		except Error:
-			return msj(mensaje_error)
+		if clasificacion=="" or clasificacion=="todo":
+			try:
+				
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "select configuraciones.nombre FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? LIMIT 4" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(salones,))
+					mensaje="El salón " + salones+" cuenta con estas configuraciones "
+					respuesta=[]
+					resp=""
+					for valor in cursor:
+						respuesta.append("Tipo "+valor[0])
+						if resp=="":
+							resp=valor[0]
+						else:
+							resp=resp+", "+valor[0]
+					if len(respuesta)==0:
+						return msj("Ups el salon no tiene clasificaciones de costo")
+					else:
+						if origen=="FACEBOOK":
+							return custom(respuestarapidafacebook(mensaje,respuesta,origen,'color'),'salon',2,nombre_parametros,valores_parametros)
+						elif idaplication!="":
+							return custom(googlequickremplace(respuesta,mensaje),'salon',2,nombre_parametros,valores_parametros)
+						else:
+							return custom(msj(mensaje+": "+resp),'salon',2,nombre_parametros,valores_parametros)
+			except Error:
+					return msj(mensaje_error)
+
+		else:
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "select configuraciones_salones.precio FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE salones.nombre=? and configuraciones.nombre=? LIMIT 1" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(salones,clasificacion,))
+					valor=cursor.fetchone()
+					if valor!=None:
+						m=Money(valor[0], Currency.USD).format('en_US')
+						mensaje="El salón " + salones+" para "+clasificacion+" tiene un precio de "+m+"."
+						return custom(msj(mensaje),'salon',2,nombre_parametros,valores_parametros)
+					else:
+						return msj("No hay ningún resultado.")
+			except Error:
+				return msj(mensaje_error)
 	#endregion
 	#region functions habitaciones()
 	def habitaciones_informacion(habitacion):
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('informacion')
+		valores_parametros.append(habitacion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -850,9 +1224,12 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('tipo')
+		valores_parametros.append(habitacion)
+		
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -875,9 +1252,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('descripcion')
+		valores_parametros.append(habitacion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -900,9 +1279,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('precio')
+		valores_parametros.append(habitacion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -926,9 +1307,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('tamano_estancia')
+		valores_parametros.append(habitacion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -951,9 +1334,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('cantidad_personas')
+		valores_parametros.append(habitacion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -976,9 +1361,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('camas_supletorias')
+		valores_parametros.append(habitacion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1001,9 +1388,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('capacidad_maxima')
+		valores_parametros.append(habitacion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1026,9 +1415,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('camas')
+		valores_parametros.append(habitacion)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1052,9 +1443,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
 		valores_parametros=[]
 		valores_parametros.append('habitacion')
 		valores_parametros.append('restaurante_servicios_list')
+		valores_parametros.append(habitacion)
 		if origen=="FACEBOOK":
 			try:
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
@@ -1071,6 +1464,24 @@ def results():
 						return msj("error de proceso")
 					else:
 						return respuestarapidafacebook(mensaje,respuesta,origen,'color')
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT habitaciones.nombre,servicios.nombre from habitaciones INNER JOIN habitaciones_servicios on habitaciones.id_habitacion=habitaciones_servicios.habitacion_id INNER JOIN servicios on habitaciones_servicios.servicio_id=servicios.id_servicio WHERE habitaciones.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(habitacion,))
+					respuesta=[]
+					mensaje="La habitacion "+habitacion+" tiene estos servicios:"
+					for valor in cursor:
+						respuesta.append(valor[1])
+					print(respuesta)
+					if len(respuesta)==0:
+						return msj("error de proceso")
+					else:
+						return googlequickremplace(respuesta,mensaje)
 			except Error:
 				return msj(mensaje_error)
 		else:
@@ -1090,6 +1501,72 @@ def results():
 						return msj("error de proceso")
 					else:
 						return msj("La habitacion "+habitacion+" tiene estos servicios: "+respuesta)
+			except Error:
+				return msj(mensaje_error)
+	
+	def habitaciones_has_promocion_list(habitacion):
+		nombre_parametros=[]
+		nombre_parametros.append('tipo')
+		nombre_parametros.append('peticion')
+		nombre_parametros.append('habitacion')
+		valores_parametros=[]
+		valores_parametros.append('habitacion')
+		valores_parametros.append('habitacion_promocion_list')
+		valores_parametros.append(habitacion)
+		if origen=="FACEBOOK":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT habitaciones.nombre,promociones.nombre FROM habitaciones INNER JOIN promociones_habitaciones ON habitaciones.id_habitacion=promociones_habitaciones.habitacion_id INNER JOIN promociones ON promociones_habitaciones.promocion_id=promociones.id_promocion WHERE habitaciones.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(habitacion,))
+					respuesta=[]
+					for vestimenta in cursor:
+						respuesta.append('Promoción '+vestimenta[1])
+					if len(respuesta)==0:
+						mensaje='Lo sentimos pero este restaurante no maneja promociones'
+						return custom(msj(mensaje),'habitacion',2,nombre_parametros,valores_parametros)
+					else:
+						return custom(respuestarapidafacebook("dentro de las promociones de este restaurante se encuentran estas opciones.",respuesta,origen,'color'),'habitacion',4,nombre_parametros,valores_parametros)
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT habitaciones.nombre,promociones.nombre FROM habitaciones INNER JOIN promociones_habitaciones ON habitaciones.id_habitacion=promociones_habitaciones.habitacion_id INNER JOIN promociones ON promociones_habitaciones.promocion_id=promociones.id_promocion WHERE habitaciones.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(habitacion,))
+					respuesta=[]
+					for vestimenta in cursor:
+						respuesta.append('Promoción '+vestimenta[1])
+					if len(respuesta)==0:
+						mensaje='Lo sentimos pero este restaurante no maneja promociones'
+						return custom(msj(mensaje),'habitacion',2,nombre_parametros,valores_parametros)
+					else:
+						return custom(googlequickremplace(respuesta,mensaje),'habitacion',2,nombre_parametros,valores_parametros)
+			except Error:
+				return msj(mensaje_error)
+		else:
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT habitaciones.nombre,promociones.nombre FROM habitaciones INNER JOIN promociones_habitaciones ON habitaciones.id_habitacion=promociones_habitaciones.habitacion_id INNER JOIN promociones ON promociones_habitaciones.promocion_id=promociones.id_promocion WHERE habitaciones.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(habitacion,))
+					respuesta=""
+					contador=1
+					for vestimenta in cursor:
+						if contador==1:
+							respuesta='Promoción: '+vestimenta[1]
+						else:
+							respuesta='Promoción: '+vestimenta[1]
+					if respuesta=="":
+						mensaje='Lo sentimos pero este restaurante no maneja promociones'
+						return custom(msj(mensaje),'habitacion',2,nombre_parametros,valores_parametros)
+					else:
+						mensaje="dentro de las promociones de este restaurante se encuentran estas opciones "+respuesta
+						return custom(msj(mensaje),'habitacion',2,nombre_parametros,valores_parametros)
 			except Error:
 				return msj(mensaje_error)
 	
@@ -1148,6 +1625,24 @@ def results():
 						return respuestarapidafacebook(mensaje,respuesta,origen,'color')
 			except Error:
 				return msj(mensaje_error)
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT habitaciones.nombre from habitaciones INNER JOIN habitaciones_servicios on habitaciones.id_habitacion=habitaciones_servicios.habitacion_id INNER JOIN servicios on habitaciones_servicios.servicio_id=servicios.id_servicio WHERE servicios.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(servicio,))
+					respuesta=[]
+					mensaje="El servicio "+servicio+" tiene estas habitaciones:"
+					for valor in cursor:
+						respuesta.append(valor[0])
+					print(respuesta)
+					if len(respuesta)==0:
+						return msj("error de proceso")
+					else:
+						return googlequickremplace(respuesta,mensaje)
+			except Error:
+				return msj(mensaje_error)
 		else:
 			try:
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
@@ -1173,9 +1668,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('informacion')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1199,9 +1696,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('descripcion')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1224,9 +1723,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('cupo')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1249,9 +1750,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('salario')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1275,9 +1778,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('horario')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1300,9 +1805,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('ubicacion')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1325,9 +1832,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('rango-edad')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1350,9 +1859,11 @@ def results():
 		nombre_parametros=[]
 		nombre_parametros.append('tipo')
 		nombre_parametros.append('peticion')
+		nombre_parametros.append('vacantes')
 		valores_parametros=[]
 		valores_parametros.append('vacante')
 		valores_parametros.append('sexo')
+		valores_parametros.append(vacantes)
 		try:
 			with sqlite3.connect(db_filename) as conn:#creamos la conección.
 				conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -1376,7 +1887,7 @@ def results():
 	
 	#region especial
 	if action=='input.unknown':
-		return custom(msj('nada'),'alberca',0,'','')
+		return msj(variablerandom("No he podido reconocer la pregunta","Que mal no se que quieres decir"))
 	#endregion
 	#region chistes
 	if action=="action.chistetoctoc":
@@ -1388,6 +1899,15 @@ def results():
 			imagen.append('https://imgtoboot.000webhostapp.com/jaja4.jpg')
 			mensaje='Jaja que buen chiste.'
 			return rndenviarimagenes(imagen,origen,mensaje)
+		elif idaplication!="":
+			imagen=[]
+			imagen.append('https://imgtoboot.000webhostapp.com/jaja.jpg')
+			imagen.append('https://imgtoboot.000webhostapp.com/jaja2.png')
+			imagen.append('https://imgtoboot.000webhostapp.com/jaja3.jpeg')
+			imagen.append('https://imgtoboot.000webhostapp.com/jaja4.jpg')
+			mensaje='Jaja que buen chiste.'
+			mensajeabajo="que buen chiste.jpg"
+			return kommunicaterndimg(imagen,mensaje,mensajeabajo)
 		else:
 			mensaje="jaja que buen chiste"
 			return msj(mensaje)
@@ -1402,48 +1922,49 @@ def results():
 			respuestas.append('Listar albercas')
 			respuestas.append('Listar restaurantes')
 			respuestas.append('Listar salones')
-			return respuestarapidafacebook('Hola buen amigo estoy para servirte desde esta pagina puedes preguntar lo que deses.',respuestas,origen,'color')
+			return respuestarapidafacebook('Buen día, soy un chatobot de atención para clientes y huespedes de hoteles. Estoy para ayudarte con cualquier pregunta.\nLos temas que puedo abordar son: ',respuestas,origen,'color')
 		else:
-			return msj('Hola buen amigo estoy para servirte desde esta pagina puedes preguntar lo que deses. desde Listar albercas, Listar restaurantes y Listar salones')
+			return msj('Hola buen amigo estoy para servirte desde esta pagina puedes preguntar lo que deses. desde Albercas, restaurantes y salones')
 	if action=="action.welcome2":
 		if origen=='FACEBOOK':
 			respuestas=[]
 			respuestas.append('Listar albercas')
 			respuestas.append('Listar restaurantes')
 			respuestas.append('Listar salones')
-			return respuestarapidafacebook('Estoy a tu servicio puedes preguntar lo que deses, aunque yo te recomendaría que preguntaras por  estas opciones las cuales son las mas frecuentes.',respuestas,origen,'color')
+			return respuestarapidafacebook('Buen día, soy un chatobot de atención para clientes y huespedes de hoteles. Estoy para ayudarte con cualquier pregunta.\nLos temas que puedo abordar son: ',respuestas,origen,'color')
 		else:
-			return msj('Estoy a tu servicio puedes preguntar lo que deses, aunque yo te recomendaría que preguntaras por  estas opciones las cuales son las mas frecuentes.')
+			return msj('Buen día amigo soy el chatobot hotelero estoy para darte toda la información deseada.\nTe presento algunas sugerencias: Listar albercas, Listar restaurantes y Listar salones')
 	if action=="action1.media":
 			if obtenertipoarchivo()=='audio':
-				print(req.get('originalDetectIntentRequest').get('payload').get('data').get('message').get('mid'))
-				#song = AudioSegment.from_mp3(lib.imagen())
-				#song.export("mashupdd.wav", format="wav")
-				#filename = "mashupdd.wav"
-				#r = sr.Recognizer()
-				#with sr.AudioFile(filename) as source:
-    				# listen for the data (load audio to memory)
-					#audio_data = r.record(source)
-    				# recognize (convert from speech to text)
-					#text = r.recognize_google(audio_data, language="es-US")
-					#return lib.msj(text)
-				return msj(req.get('originalDetectIntentRequest').get('payload').get('data').get('message').get('mid'))
+				return msj(obtenertipoarchivo())
 			else:
-				return msj('Ups no he podido comprender lo que me has dicho')
+				return msj(imagen())
 	#endregion
 	#region chabotplatica
 	#action1.sentement
 	if action=="input.welcome":
+		name=variable('name')
 		if origen=='FACEBOOK':
 			respuestas=[]
-			respuestas.append('Listar albercas')
-			respuestas.append('Listar restaurantes')
-			respuestas.append('Listar salones')
-			respuestas.append('Listar habitaciones')
-			respuestas.append('Listar vacantes')
-			return respuestarapidafacebook('Hola buen amigo estoy para servirte desde esta pagina puedes preguntar lo que deses.',respuestas,origen,'color')
+			respuestas.append('Albercas')
+			respuestas.append('Restaurantes')
+			respuestas.append('Salones')
+			respuestas.append('Habitaciones')
+			respuestas.append('Vacantes')
+			respuestas.append('Actividades')
+			return respuestarapidafacebook("Buen día "+name+", soy el chatobot de atención para clientes y huespedes del hotel Nuevo Ne-Kié. Estoy para ayudarte con cualquier pregunta.\nLos temas que puedo abordar son: ",respuestas,origengit)
+			
+		elif idaplication!="":
+			respuestas=[]
+			respuestas.append('Albercas')
+			respuestas.append('Restaurantes')
+			respuestas.append('Salones')
+			respuestas.append('Habitaciones')
+			respuestas.append('Vacantes')
+			respuestas.append('Actividades')
+			return googlequickremplace(respuestas,"Buen día "+name+", soy el chatobot de atención para clientes y huespedes del hotel Nuevo Ne-Kié. Estoy para ayudarte con cualquier pregunta.\nLos temas que puedo abordar son: ")
 		else:
-			return msj('Hola buen amigo estoy para servirte desde esta pagina puedes preguntar lo que deses. desde Listar albercas, Listar restaurantes y Listar salones')
+			return msj('Buen día '+name+', soy el chatobot de atención para clientes y huespedes del hotel Nuevo Ne-Kié. Estoy para ayudarte con cualquier pregunta.\nLos temas que puedo abordar son:  Albercas, Restaurantes y Salones')
 
 	#if action=="action1.test":
 	#	return custom(msj('juas'),'test-followup',2,'caca','salchichas')
@@ -1459,7 +1980,15 @@ def results():
 			mensajes.append('Apenas soy un bebe que se encuentra en fase beta')
 			mensajes.append('Soy apenas un bebe recién nacido')
 			return rndenviarimagenes(url,origen,mensajes)
-
+		elif idaplication!="":
+			url=[]
+			url.append('https://imgtoboot.000webhostapp.com/bebe.jpg')
+			url.append('https://imgtoboot.000webhostapp.com/bebe2.jpeg')
+			url.append('https://imgtoboot.000webhostapp.com/bebe3.jpeg')
+			mensajes=[]
+			mensajes.append('Apenas soy un bebe que se encuentra en fase beta')
+			mensajes.append('Soy apenas un bebe recién nacido')
+			return kommunicaterndimg(url,mensajes)
 		else:
 			mensajes=[]
 			mensajes.append('Apenas soy un bebe que se encuentra en fase beta')
@@ -1510,8 +2039,27 @@ def results():
 				img.append('https://imgtoboot.000webhostapp.com/mal3.jpg')
 				return rndenviarimagenes(img,origen,text)
 				
-			
+		elif idaplication!="":
+			if sentiment=='bien':
+				text=[]
+				text.append('Que bien, que te parecería rentar un hotel para festejar. si/no')
+				text.append('Que bueno, deberíamos festejar en un hotel. si/no')
+				text.append('Genial, ha que hotel vamos (si/no)')
+				img=[]
+				img.append('https://imgtoboot.000webhostapp.com/exelente1.jpeg')
+				img.append('https://imgtoboot.000webhostapp.com/exelente2.jpg')
+				return kommunicaterndimg(img,text)
+			if sentiment=='mal':
+				text=[]
+				text.append('Que mal, deberíamos darnos un respiro en un hotel te interesaría? si/no')
+				text.append('Que triste, pero alegrate y date un buen día en un hotel ¿lo desearías? si/no')
+				img=[]
+				img.append('https://imgtoboot.000webhostapp.com/mal.png')
+				img.append('https://imgtoboot.000webhostapp.com/mal2.jpeg')
+				img.append('https://imgtoboot.000webhostapp.com/mal3.jpg')
+				return kommunicaterndimg(img,text)
 		else:
+			
 			if sentiment=='bien':
 				text=[]
 				text.append('Que bien, que te parecería rentar un hotel para festejar.')
@@ -1535,7 +2083,14 @@ def results():
 			img.append('https://imgtoboot.000webhostapp.com/triste.jpeg')
 			img.append('https://imgtoboot.000webhostapp.com/triste2.jpg')
 			return rndenviarimagenes(img,origen,text)
-			
+		elif idaplication!="":
+			text=[]
+			text.append('Que sad se a negado la petición.')
+			text.append('Se ha cancelado.')
+			img=[]
+			img.append('https://imgtoboot.000webhostapp.com/triste.jpeg')
+			img.append('https://imgtoboot.000webhostapp.com/triste2.jpg')
+			return kommunicaterndimg(img,text)
 		else:
 			text=[]
 			text.append('Que sad se a negado la petición.')
@@ -1561,6 +2116,8 @@ def results():
 	#region albercas
 	#region albercas parte de las tarjetas
 	if action=="action1.listaalberca":
+		req = request.get_json(force=True)
+
 		if origen=="FACEBOOK":
 			try:
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
@@ -1575,15 +2132,46 @@ def results():
 						lista[contador]={"boton":[]}
 						lista[contador]['titulo']=registro[0]
 						lista[contador]['subtitulo']=registro[0]
-						lista[contador]['img']='https://imgtoboot.000webhostapp.com/exelente1.jpeg'
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/alb.jpg'
 						lista[contador]['boton'].append("Ver información de la alberca "+registro[0])
 						lista[contador]['boton'].append("Días de apertura de la alberca "+registro[0])
 						lista[contador]['boton'].append("Código de vestimenta de la alberca "+registro[0])
 						contador=contador+1
 					#enviamos la respuesta  al fulfillment de dialogflow
 					return enviartarjetas(lista,origen)
+
 			except Error:
 				return msj(mensaje_error)
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT nombre FROM albercas LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					contador=1
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":{"dos":[],"tres":[],"cuatro":[]}}
+						lista[contador]["titulo"]=registro[0]
+						lista[contador]["costo"]=""
+						lista[contador]["calidad"]=""
+						lista[contador]["sub"]="Calidad verificada"
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/alb.jpg'
+						lista[contador]["descripcion"]="Esta es una alberca "+registro[0]
+						lista[contador]["boton"]["dos"].extend(("ver informacion de "+registro[0],"submit"))
+						lista[contador]["boton"]["tres"].extend(("horarios de "+registro[0],"submit"))
+						lista[contador]["boton"]["cuatro"].extend(("dias de apertura de "+registro[0],"submit"))
+						contador=contador+1
+					print(lista)
+					#enviamos la respuesta  al fulfillment de dialogflow
+					return kommunicatecarrousel('Albercas',lista)
+			except Error:
+				return msj(mensaje_error)
+			
+			
+			#submit
+			
 		else:
 			try:
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
@@ -1601,9 +2189,9 @@ def results():
 						contador=2
 					#enviamos la respuesta  al fulfillment de dialogflow
 					if resp=="":
-						msjs="Las habitaciones no existen"
+						msjs="Las albercas no existen"
 					else:
-						msjs='Las habitaciones son: '+resp
+						msjs='Las albercas disponibles son: '+resp
 					return msj(msjs)
 			except Error:
 				return msj(mensaje_error)
@@ -1615,45 +2203,29 @@ def results():
 			return msj('Ups no entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
 		else:
 			alberca=variable('alberca')
-		if origen=="FACEBOOK":
-			return albercas_diasapertura(alberca)
-	
-		else:
-			return albercas_diasapertura(alberca)
+		return albercas_diasapertura(alberca)
 
 
-
-	
-	
 	if action=="action1.vestimentaalberca1":
 		if variable('alberca')=='':
 			return msj('Ups no entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
 		else:
 			alberca=variable('alberca')
-		if origen=="FACEBOOK":
-			return alberca_vestimenta(alberca)
-		else:
-			return alberca_vestimenta(alberca)
+		return alberca_vestimenta(alberca)
 
 	if action=="action1.albercainfo":
 		if variable('alberca')=='':
 			return msj('Ups no entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
 		else:
 			alberca=variable('alberca')
-		if origen=="FACEBOOK":
-			return alberca_informacion(alberca)
-		else:
-			return alberca_informacion(alberca)
+		return alberca_informacion(alberca)
 
 	if action=="action1.albercaoferta":
 		if variable('alberca')=='':
 			return msj('Ups no entiendo que a que alberca te refieres.\nPuedes escribir alberca seguido del nombre para recordarlo')
 		else:
 			alberca=variable('alberca')
-		if origen=="FACEBOOK":
-			return alberca_oferta(alberca)
-		else:
-			return alberca_oferta(alberca)
+		return alberca_oferta(alberca)
 
 	#endregion
 
@@ -1710,6 +2282,22 @@ def results():
 						#enviamos la respuesta  al fulfillment de dialogflow
 					titulo="La alberca de que tipo de vestimenta deseas"
 					return custom(respuestarapidafacebook(titulo,resp,origen,"color"),'alberca_filtro-followup',2,'','')
+					return custom(msj('tienes una profundidad tal'))
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT vestimenta FROM albercas GROUP by vestimenta LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					resp = []#inicializamos variable resp
+					for registro in cursor:
+						resp.append(registro[0]) #creamos un bucle para recuperar cada una de las filas, en este caso solo es una.
+						#enviamos la respuesta  al fulfillment de dialogflow
+					titulo="La alberca de que tipo de vestimenta deseas"
+					return custom(googlequickremplace(resp,titulo),'alberca_filtro-followup',2,'','')
 					return custom(msj('tienes una profundidad tal'))
 			except Error:
 				return msj(mensaje_error)
@@ -1882,6 +2470,23 @@ def results():
 					return custom(respuestarapidafacebook('Estas son las clasificaciones de edad ',resp,origen,'color'),'alberca_filtro-profundidad-yes-followup',2,variables,numeros)
 			except Error:
 				return custom(msj(mensaje_error),'alberca_filtro-followup',0,'','')
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT albercas.edad_ingreso FROM albercas GROUP by albercas.edad_ingreso LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)
+					resp = []#inicializamos variable resp
+					contador=1
+					lista={}
+					for registro in cursor:
+						resp.append(registro[0])
+						#creamos un bucle para recuperar cada una de las filas, en este caso solo es una.
+						contador=contador+1
+					return custom(googlequickremplace(resp,"Estas son las clasificaciones."),'alberca_filtro-profundidad-yes-followup',2,variables,numeros)
+			except Error:
+				return custom(msj(mensaje_error),'alberca_filtro-followup',0,'','')
 		else:
 			try:
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
@@ -1968,7 +2573,7 @@ def results():
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
 					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
 					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
-					query = "SELECT nombre FROM salones LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					query = "SELECT distinct salones.nombre from salones inner join configuraciones_salones on salones.id_salon=configuraciones_salones.salon_id inner join configuraciones on configuraciones_salones.configuracion_id=configuraciones.id_configuracion LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
 					cursor.execute(query)#ejecutamos el query.
 					resp = ""#inicializamos variable resp
 					contador=0
@@ -1977,7 +2582,7 @@ def results():
 						lista[contador]={"boton":[]}
 						lista[contador]['titulo']=registro[0]
 						lista[contador]['subtitulo']=registro[0]
-						lista[contador]['img']='https://imgtoboot.000webhostapp.com/exelente1.jpeg'
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/salon.jpg'
 						lista[contador]['boton'].append("Ver información del salón "+registro[0])
 						lista[contador]['boton'].append("precio del salón "+registro[0])
 						lista[contador]['boton'].append("cantidad de personas del salón "+registro[0])
@@ -1986,12 +2591,38 @@ def results():
 					return enviartarjetas(lista,origen)
 			except Error:
 				return msj(mensaje_error)
+		elif idaplication!="":
+			
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT distinct salones.nombre from salones inner join configuraciones_salones on salones.id_salon=configuraciones_salones.salon_id inner join configuraciones on configuraciones_salones.configuracion_id=configuraciones.id_configuracion LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					contador=1
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":{"dos":[],"tres":[],"cuatro":[]}}
+						lista[contador]["titulo"]=registro[0]
+						lista[contador]["costo"]=""
+						lista[contador]["calidad"]=""
+						lista[contador]["sub"]="Calidad verificada"
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/salon.jpg'
+						lista[contador]["descripcion"]="Esta es un salon "+registro[0]
+						lista[contador]["boton"]["dos"].extend(("Ver información del salón "+registro[0],"submit"))
+						lista[contador]["boton"]["tres"].extend(("precio del salón "+registro[0],"submit"))
+						lista[contador]["boton"]["cuatro"].extend(("cantidad de personas del salón "+registro[0],"submit"))
+						contador=contador+1
+					#enviamos la respuesta  al fulfillment de dialogflow
+					return kommunicatecarrousel('Salones',lista)
+			except Error:
+				return msj(mensaje_error)
 		else:
 			try:
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
 					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
 					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
-					query = "SELECT nombre FROM salones LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					query = "SELECT distinct salones.nombre from salones inner join configuraciones_salones on salones.id_salon=configuraciones_salones.salon_id inner join configuraciones on configuraciones_salones.configuracion_id=configuraciones.id_configuracion LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
 					cursor.execute(query)#ejecutamos el query.
 					resp = ""#inicializamos variable resp
 					contador=0
@@ -2002,50 +2633,42 @@ def results():
 						else:
 							resp=resp+", "+registro[0] #creamos un bucle para recuperar cada una de las filas, en este caso solo es una.
 						#enviamos la respuesta  al fulfillment de dialogflow
-					return msj("Escribe el tipo de restaurantes que deseas "+strings)
+					if resp=="":
+						return msj("Lo siento no hay salones disponibles")
+					else:
+						return msj("Los salones disponibles son: "+resp)
 			except Error:
 				return msj(mensaje_error)
 
 
 	if action=="action1.salon_informacion":
 		salones=variable('salon')
+		clasificacion=variable('clacificacion')
 		if salones=="":
 			return msj('Ups no tengo los criterios para darle una respuesta.\npodría ser que el nombre del salón') 
-		if origen=="FACEBOOK":
-			return salones_informacion(salones,'todo')
-		else:
-			return salones_informacion(salones,'todo')
+		return salones_informacion(salones,clasificacion)
 
 	if action=="action1.salon_capacidad":
 		salones=variable('salon')
 		clasificacion=variable('clacificacion')
-		if salones=="" or clasificacion=="":
+		if salones=="":
 			return msj('Ups no tengo los criterios para darle una respuesta.\npodría ser que el nombre del salón o de la clasificación esta mal') 
-		if origen=="FACEBOOK":
-			return salones_capacidad_personas(salones,clasificacion)
-		else:
-			return salones_capacidad_personas(salones,clasificacion)
+		return salones_capacidad_personas(salones,clasificacion)
 	
 
 	if action=="action1.salon_precio":
 		salones=variable('salon')
 		clasificacion=variable('clacificacion')
-		if salones=="" or clasificacion=="":
+		if salones=="":
 			return msj('Ups no tengo los criterios para darle una respuesta.\npodría ser que el nombre del salón o de la clasificación esta mal') 
-		if origen=="FACEBOOK":
-			return salones_precio(salones,clasificacion)
-		else:
-			return salones_precio(salones,clasificacion)
+		return salones_precio(salones,clasificacion)
 
 	if action=="action1.salon_hora_extra":
 		salones=variable('salon')
 		clasificacion=variable('clacificacion')
-		if salones=="" or clasificacion=="":
+		if salones=="":
 			return msj('Ups no tengo los criterios para darle una respuesta.\npodría ser que el nombre del salón o de la clasificación esta mal') 
-		if origen=="FACEBOOK":
-			return salones_hora_extra(salones,clasificacion)
-		else:
-			return salones_hora_extra(salones,clasificacion)
+		return salones_hora_extra(salones,clasificacion)
 
 	#endregion
 
@@ -2073,7 +2696,26 @@ def results():
 						return respuestarapidafacebook('Clasificación '+variablebase+" esta presente en estos salones:",resp,origen,'color')
 			except Error:
 				return msj(mensaje_error)
-		else:
+
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "select salones.nombre FROM configuraciones_salones INNER JOIN salones ON configuraciones_salones.salon_id=salones.id_salon INNER JOIN configuraciones ON configuraciones.id_configuracion=configuraciones_salones.configuracion_id WHERE configuraciones.nombre=? LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query,(variablebase,))
+					resp = []#inicializamos variable resp
+					contador=1
+					for registro in cursor:
+						resp.append(registro[0])
+						contador=contador+1
+					if len(resp)==0:
+						return msj('No hay ningún restaurante con esta tipo de clacificacion')
+					else:
+						return googlequickremplace(respuesta,"Dentro de las promociones de este restaurante se encuentran estas opciones.")		
+			except Error:
+				return msj(mensaje_error)
+
 			try:
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
 					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
@@ -2117,13 +2759,39 @@ def results():
 						lista[contador]={"boton":[]}
 						lista[contador]['titulo']=registro[0]
 						lista[contador]['subtitulo']=registro[0]
-						lista[contador]['img']='https://imgtoboot.000webhostapp.com/exelente1.jpeg'
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/res.jpg'
 						lista[contador]['boton'].append("Ver información de "+registro[0])
 						lista[contador]['boton'].append("Que promociones hay en el restaurante "+registro[0])
 						lista[contador]['boton'].append("horario del restaurante "+registro[0])
 						#enviamos la respuesta  al fulfillment de dialogflow
 						contador=contador+1
 					return enviartarjetas(lista,origen)
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT nombre FROM restaurantes LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					contador=1
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":{"dos":[],"tres":[],"cuatro":[]}}
+						lista[contador]["titulo"]=registro[0]
+						lista[contador]["costo"]=""
+						lista[contador]["calidad"]=""
+						lista[contador]["sub"]=""
+						lista[contador]["img"]="https://imgtoboot.000webhostapp.com/img/res.jpg"
+						lista[contador]["descripcion"]="Esta es un restaurante "+registro[0]
+						lista[contador]["boton"]["dos"].extend(("Ver información de "+registro[0],"submit"))
+						lista[contador]["boton"]["tres"].extend(("Que promociones hay en el restaurante "+registro[0],"submit"))
+						lista[contador]["boton"]["cuatro"].extend(("horario del restaurante "+registro[0],"submit"))
+						contador=contador+1
+					#enviamos la respuesta  al fulfillment de dialogflow
+					return kommunicatecarrousel('Restaurantes',lista)
 			except Error:
 				return msj(mensaje_error)
 		else:
@@ -2151,29 +2819,21 @@ def results():
 	
 	if action=="action1.restaurante_informacion":
 		restaurantes=variable('restaurante')
-		restaurantes2=normalize("NFKD",restaurantes).encode("ascii","ignore").decode("ascii")
-		if origen=="FACEBOOK":
-			return restaurantes_informacion(restaurantes2)
-		else:
-			return restaurantes_informacion(restaurantes2)
+		return restaurantes_informacion(restaurantes)
+
 
 	if action=="action1.restaurante_precios":
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups no he podido entender lo dicho')
-		if origen=="FACEBOOK":
-			return restaurante_precio(restaurantes)
-		else:
-			return restaurante_precio(restaurantes)
+		return restaurante_precio(restaurantes)
+
 	
 	if action=="action1.resaurante_horario":
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups no reconozco el restaurante indicado podrías repetírmelo')
-		if origen=="FACEBOOK":
-			return restaurantes_horario(restaurantes)
-		else:
-			return restaurantes_horario(restaurantes)
+		return restaurantes_horario(restaurantes)
 
 
 	#endregion
@@ -2183,47 +2843,32 @@ def results():
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups no reconozco el restaurante indicado podrías repetírmelo')
-		if origen=="FACEBOOK":
-			return restaurantes_descripcion(restaurantes)
-		else:
-			return restaurantes_descripcion(restaurantes)
+		return restaurantes_descripcion(restaurantes)
 
 
 	if action=="action1.restaurante_vestimenta":
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups no reconozco el restaurante indicado podrías repetírmelo')
-		if origen=="FACEBOOK":
-			return restaurantes_vestimenta(restaurantes)
-		else:
-			return restaurantes_vestimenta(restaurantes)
+		return restaurantes_vestimenta(restaurantes)
 
 	if action=="action1.restaurante_dias":
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups no reconozco el restaurante especificado')
-		if origen=="FACEBOOK":
-			return restaurantes_dias(restaurantes)
-		else:
-			return restaurantes_dias(restaurantes)
+		return restaurantes_dias(restaurantes)
 
 	if action=="action1.restaurante_horas_apertura":
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups no reconozco el restaurante indicado podrías repetírmelo')
-		if origen=="FACEBOOK":
-			return restaurantes_hora_apertura(restaurantes)
-		else:
-			return restaurantes_hora_apertura(restaurantes)
+		return restaurantes_hora_apertura(restaurantes)
 
 	if action=="action1.restaurante_edad_ingreso":
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups no reconozco el restaurante indicado podrías repetírmelo')
-		if origen=="FACEBOOK":
-			return restaurantes_edad_ingreso(restaurantes)
-		else:
-			return restaurantes_edad_ingreso(restaurantes)
+		return restaurantes_edad_ingreso(restaurantes)
 
 
 	#endregion
@@ -2235,16 +2880,15 @@ def results():
 
 	if action=="action1.restaurante_has_promociones_list":
 		restaurantes=variable('restaurante')
+		if restaurantes=="":
+			return msj('Ups la promoción que esta buscando tal vez no exista.')
 		return restaurantes_has_promocion_list(restaurantes)
 
 	if action=="action1.restaurante_info_promocion_1":
 		restaurantes=variable('restaurante')
 		if restaurantes=="":
 			return msj('Ups la promoción que esta buscando tal vez no exista.')
-		if origen=="FACEBOOK":
-			return restaurantes_has_promocion_info(restaurantes)
-		else:
-			return restaurantes_has_promocion_info(restaurantes)
+		return restaurantes_has_promocion_info(restaurantes)
 
 	#endregion
 	#endregion
@@ -2270,6 +2914,22 @@ def results():
 						return respuestarapidafacebook("dentro de las promociones de este restaurante se encuentran estas opciones.",respuesta,origen,'color')		
 			except Error:
 				return msj(mensaje_error)
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT promociones.nombre FROM promociones LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)
+					respuesta=[]
+					for vestimenta in cursor:
+						respuesta.append(vestimenta[0])
+					if len(respuesta)==0:
+						return msj('Lo sentimos pero este restaurante no maneja promociones')
+					else:
+						return googlequickremplace(respuesta,"Dentro de las promociones de este restaurante se encuentran estas opciones.")		
+			except Error:
+				return msj(mensaje_error)	
 		else:
 			try:
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
@@ -2290,60 +2950,54 @@ def results():
 			except Error:
 				return msj(mensaje_error)
 
+
 	if action=="action1.promocion_all_data":
 		nombre_promociones=variable('promociones')
-		if origen=="FACEBOOK":
-			return promociones_all_data(nombre_promociones)
-		else:
-			return promociones_all_data(nombre_promociones)
+		if nombre_promociones=="":
+			return msj("Ups no he reconocido la promoción")
+		return promociones_all_data(nombre_promociones)
 
 
 	#end region
 
 	if action=="action1.promocion_tipo":
 		nombre_promocion=variable('promociones')
-		if origen=="FACEBOOK":
-			return promociones_tipo(nombre_promocion)
-		else:
-			return promociones_tipo(nombre_promocion)
+		if nombre_promociones=="":
+			return msj("Ups no he reconocido la promoción")
+		return promociones_tipo(nombre_promocion)
 
 
 	if action=="action1.promocion_descripcion":
 		nombre_promocion=variable('promociones')
-		if origen=="FACEBOOK":
-			return promociones_descripcion(nombre_promocion)
-		else:
-			return promociones_descripcion(nombre_promocion)
+		if nombre_promociones=="":
+			return msj("Ups no he reconocido la promoción")
+		return promociones_descripcion(nombre_promocion)
 
 
 
 	if action=="action1.promocio_fechas":
 		nombre_promocion=variable('promociones')
-		if origen=="FACEBOOK":
-			return promociones_fechas(nombre_promocion)
-		else:
-			return promociones_fechas(nombre_promocion)
+		if nombre_promociones=="":
+			return msj("Ups no he reconocido la promoción")
+		return promociones_fechas(nombre_promocion)
 
 	if action=="action1.promocion_horario":
 		nombre_promocion=variable('promociones')
-		if origen=="FACEBOOK":
-			return promociones_horario(nombre_promocion)
-		else:
-			return promociones_horario(nombre_promocion)
+		if nombre_promociones=="":
+			return msj("Ups no he reconocido la promoción")
+		return promociones_horario(nombre_promocion)
 
 	if action=="action1.promocion_dia":
 		nombre_promocion=variable('promociones')
-		if origen=="FACEBOOK":
-			return promociones_dia(nombre_promocion)
-		else:
-			return promociones_dia(nombre_promocion)
+		if nombre_promociones=="":
+			return msj("Ups no he reconocido la promoción")
+		return promociones_dia(nombre_promocion)
 
 	if action=="action1.promocion_costo":
 		nombre_promocion=variable('promociones')
-		if origen=="FACEBOOK":
-			return promociones_costo(nombre_promocion)
-		else:
-			return promociones_costo(nombre_promocion)
+		if nombre_promociones=="":
+			return msj("Ups no he reconocido la promoción")
+		return promociones_costo(nombre_promocion)
 
 	#endregion
 
@@ -2357,12 +3011,28 @@ def results():
 				with sqlite3.connect(db_filename) as conn:#creamos la conección.
 					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
 					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
-					query = "SELECT nombre FROM restaurantes" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					query = "SELECT nombre FROM restaurantes LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
 					cursor.execute(query)#ejecutamos el query.
 					for registro in cursor:
 						respuestas['boton'].append(registro[0]) #creamos un bucle para recuperar cada una de las filas, en este caso solo es una.
 						#enviamos la respuesta  al fulfillment de dialogflow
 					return enviarrespuestasrapidas(respuestas,origen)
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT nombre FROM restaurantes LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)
+					respuesta=[]
+					for vestimenta in cursor:
+						respuesta.append(vestimenta[0])
+					if len(respuesta)==0:
+						return msj('Lo sentimos pero este restaurante no maneja promociones')
+					else:
+						return googlequickremplace(respuesta,"Dentro de las promociones de este restaurante se encuentran estas opciones.")		
 			except Error:
 				return msj(mensaje_error)
 		else:
@@ -2585,7 +3255,7 @@ def results():
 				elif peticion=="hora_extra":
 					return salones_hora_extra(salon,clasificacion)
 				elif peticion=="informacion":
-					return salones_informacion(salon,'todo')
+					return salones_informacion(salon,clasificacion)
 				elif peticion=="precio":
 					return salones_precio(salon,clasificacion)
 				else:
@@ -2599,7 +3269,7 @@ def results():
 				elif peticion=="hora_extra":
 					return salones_hora_extra(salon,clasificacion)
 				elif peticion=="informacion":
-					return salones_informacion(salon,'todo')
+					return salones_informacion(salon,clasificacion)
 				elif peticion=="precio":
 					return salones_precio(salon,clasificacion)
 				else:
@@ -2630,6 +3300,8 @@ def results():
 					return habitaciones_capacidad_maxima(habitaciones)
 				elif peticion=="camas":
 					return habitaciones_camas(habitaciones)
+				elif peticion=="habitacion_promocion_list":
+					return habitaciones_has_promocion_list(habitaciones)
 				else:
 					return msj("error 2")
 			else:
@@ -2654,6 +3326,8 @@ def results():
 					return habitaciones_capacidad_maxima(habitaciones)
 				elif peticion=="camas":
 					return habitaciones_camas(habitaciones)
+				elif peticion=="habitacion_promocion_list":
+					return habitaciones_has_promocion_list(habitaciones)
 				else:
 					return msj("error 2")
 			else:
@@ -2726,6 +3400,40 @@ def results():
 					return msj("error 2")
 			else:
 				return msj("error 1")
+	if action=="action2.actividad_contexo":
+		tipo=variable('tipo') #esta es para obtener el tipo de elemento
+		peticion=variable('peticion')
+		actividades=variable('actividades')
+		if origen=="FACEBOOK":
+			if tipo=="actividad":
+				if peticion=="informacion":
+					return actividades_informacion(actividades)
+				elif peticion=="descripcion":
+					return actividades_descripcion(actividades)
+				elif peticion=="lugar":
+					return actividades_lugar(actividades)
+				elif peticion=="dia":
+					return actividades_dia(actividades)
+				elif peticion=="hora":
+					return actividades_hora(actividades)
+				elif peticion=="horario":
+					return actividades_horario(actividades)
+		else:
+			if tipo=="actividad":
+				if peticion=="informacion":
+					return actividades_informacion(actividades)
+				elif peticion=="descripcion":
+					return actividades_descripcion(actividades)
+				elif peticion=="lugar":
+					return actividades_lugar(actividades)
+				elif peticion=="dia":
+					return actividades_dia(actividades)
+				elif peticion=="hora":
+					return actividades_hora(actividades)
+				elif peticion=="horario":
+					return actividades_horario(actividades)
+
+			
 	#endregion
 
 	#region demas
@@ -2771,15 +3479,41 @@ def results():
 					lista={}
 					for registro in cursor:
 						lista[contador]={"boton":[]}
-						lista[contador]['titulo']=registro[0]
+						lista[contador]['titulo']=registro[0].capitalize()
 						lista[contador]['subtitulo']=registro[0]
-						lista[contador]['img']='https://imgtoboot.000webhostapp.com/exelente1.jpeg'
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/emp.jpeg'
 						lista[contador]['boton'].append("Ver información de la vacante "+registro[0])
-						lista[contador]['boton'].append("Donde se ubica el puesto "+registro[0])
-						lista[contador]['boton'].append("Sexo del puesto "+registro[0])
+						lista[contador]['boton'].append("Donde se ubica la vacante "+registro[0])
+						lista[contador]['boton'].append("horario de la vacante "+registro[0])
 						contador=contador+1
 					#enviamos la respuesta  al fulfillment de dialogflow
 					return enviartarjetas(lista,origen)
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT puesto,salario FROM vacantes LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					contador=1
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":{"dos":[],"tres":[],"cuatro":[]}}
+						lista[contador]["titulo"]=registro[0].capitalize()
+						lista[contador]["costo"]=str(Money(registro[1], Currency.USD).format('en_US'))
+						lista[contador]["calidad"]=""
+						lista[contador]["sub"]=""
+						lista[contador]["img"]="https://imgtoboot.000webhostapp.com/img/emp.jpeg"
+						lista[contador]["descripcion"]="Esta es un vacante "+registro[0]
+						lista[contador]["boton"]["dos"].extend(("Ver información de "+registro[0],"submit"))
+						lista[contador]["boton"]["tres"].extend(("Donde se ubica la vacante "+registro[0],"submit"))
+						lista[contador]["boton"]["cuatro"].extend(("horario de la vacante "+registro[0],"submit"))
+						contador=contador+1
+					#enviamos la respuesta  al fulfillment de dialogflow
+					return kommunicatecarrousel('Vacantes',lista)
 			except Error:
 				return msj(mensaje_error)
 		else:
@@ -2799,9 +3533,9 @@ def results():
 						contador=2
 					#enviamos la respuesta  al fulfillment de dialogflow
 					if resp=="":
-						msjs="Las habitaciones no existen"
+						msjs="Las vacantes no existen"
 					else:
-						msjs='Las habitaciones son: '+resp
+						msjs='Las vacantes son: '+resp
 					return msj(msjs)
 			except Error:
 				return msj(mensaje_error)
@@ -2870,7 +3604,7 @@ def results():
 						lista[contador]={"boton":[]}
 						lista[contador]['titulo']=registro[0]
 						lista[contador]['subtitulo']=registro[0]
-						lista[contador]['img']='https://imgtoboot.000webhostapp.com/exelente1.jpeg'
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/hab.jpg'
 						lista[contador]['boton'].append("Ver información de habitacion "+registro[0])
 						lista[contador]['boton'].append("precio de habitacion "+registro[0])
 						lista[contador]['boton'].append("Servicios de "+registro[0])
@@ -2878,61 +3612,318 @@ def results():
 					return enviartarjetas(lista,origen)
 			except Error:
 				return msj(mensaje_error)
+		elif idaplication!="":
+			
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT nombre,precio FROM habitaciones LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					contador=1
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":{"dos":[],"tres":[],"cuatro":[]}}
+						lista[contador]["titulo"]=registro[0]
+						lista[contador]["costo"]=str(Money(registro[1], Currency.USD).format('en_US'))
+						lista[contador]["calidad"]=""
+						lista[contador]["sub"]="Calidad verificada"
+						lista[contador]["img"]="https://imgtoboot.000webhostapp.com/img/hab.jpg"
+						lista[contador]["descripcion"]="Esta es una habitacion "+registro[0]
+						lista[contador]["boton"]["dos"].extend(("Ver información de "+registro[0],"submit"))
+						lista[contador]["boton"]["tres"].extend(("precio de habitacion "+registro[0],"submit"))
+						lista[contador]["boton"]["cuatro"].extend(("Servicios de "+registro[0],"submit"))
+						contador=contador+1
+					#enviamos la respuesta  al fulfillment de dialogflow
+					return kommunicatecarrousel('Habitaciones',lista)
+			except Error:
+				return msj(mensaje_error)
 		else:
-			return msj('habitaciones defauld')
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT habitaciones.nombre FROM habitaciones LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					resp = ""#inicializamos variable resp
+					contador=0
+					lista={}
+					for registro in cursor:
+						if contador==0:
+							resp=registro[0]
+						else:
+							resp=resp+", "+registro[0]
+						contador=contador+1
+					if resp=="":
+						return msj("Lo sentimso no existen habitaciones")
+					else:
+						return msj("Las habitaciones disponibles son: "+resp)
+			except Error:
+				return msj(mensaje_error)
 
 	if action=="action1.habitaciones_informacion":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_informacion(habitacion)
 
 	if action=="action1_habitaciones_tipo":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_tipo(habitacion)
 
 	if action=="action1.habitaciones_descripcion":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_descripcion(habitacion)
 
 	
 	if action=="action1_habitacion_precio":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_precio(habitacion)
 	
 	if action=="action1.habitacion_tamano_estancia":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_tamano_estancia(habitacion)
 
 	if action=="action1.habitaciones_cantidad_personas":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_cantidad_personas(habitacion)
 
 	if action=="action1.habitaciones_camas_supletorias":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_camas_supletorias(habitacion)
 
 	if action=="action1.habitaciones_capacidad_maxima":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_capacidad_maxima(habitacion)
 
 	if action=="action1.habitaciones_camas":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_camas(habitacion)
 	
 	if action=="action1.habitaciones_has_servicios_list":
 		habitacion=variable('habitaciones')
+		if habitacion=="":
+			return msj("Ups no he podido reconocer el restaurante")
 		return habitaciones_has_servicios_list(habitacion)
 	#endregion
 
 	#region servicios
+	if action=="action1.servicios_listar":
+		if origen=="FACEBOOK":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT servicios.nombre FROM servicios LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					resp = ""#inicializamos variable resp
+					contador=0
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":[]}
+						lista[contador]['titulo']=registro[0]
+						lista[contador]['subtitulo']=registro[0]
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/promo.png'
+						lista[contador]['boton'].append("Ver información de servicio "+registro[0])
+						contador=contador+1
+					return enviartarjetas(lista,origen)
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT nombre FROM servicios LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					contador=1
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":{"dos":[],"tres":[],"cuatro":[]}}
+						lista[contador]["titulo"]=registro[0]
+						lista[contador]["costo"]=""
+						lista[contador]["calidad"]=""
+						lista[contador]["sub"]=""
+						lista[contador]["img"]="https://imgtoboot.000webhostapp.com/img/promo.png"
+						lista[contador]["descripcion"]="esta es un servicio "+registro[0]
+						lista[contador]["boton"]["dos"].extend(("Ver información de servicio "+registro[0],"submit"))
+						lista[contador]["boton"]["tres"].extend((""+registro[0],"submit"))
+						lista[contador]["boton"]["cuatro"].extend(("que es "+registro[0],"submit"))
+						contador=contador+1
+					#enviamos la respuesta  al fulfillment de dialogflow
+					return kommunicatecarrousel('Servicios',lista)
+			except Error:
+				return msj(mensaje_error)
+		else:
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT servicios.nombre FROM servicios LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					resp = ""#inicializamos variable resp
+					contador=0
+					lista={}
+					for registro in cursor:
+						if resp=="":
+							resp=registro[0]
+						else:
+							resp=resp+", "+registro[0]
+						contador=contador+1
+					if resp=="":
+						return msj("Lo sentimos no existen los servicios")
+					else:
+						return msj("Los servicios son: "+resp)
+			except Error:
+				return msj(mensaje_error)
 	if action=="action1_servicios_info":
 		habitaciones_servicios=variable('habitaciones_servicios')
+		if habitaciones_servicios=="":
+			return msj("Ups no he podido reconocer los servicios")
 		return servicio_info(habitaciones_servicios)
 
 	if action=="action1.servicios_filtro":
 		habitaciones_servicios=variable('habitaciones_servicios')
+		if habitaciones_servicios=="":
+			return msj("Ups no he podido reconocer los servicios")
 		return servisio_filtro(habitaciones_servicios)
+	
+	if action=="action1.habitaciones_has_promociones_list":
+		habitaciones=variable('habitaciones')
+		if habitaciones_servicios=="":
+			return msj("Ups no he podido reconocer los servicios")
+		return habitaciones_has_promocion_list(habitaciones)
 	#endregion
 
+	#region actividades
+	if action=="action1.actividad_listar":
+		if origen=="FACEBOOK":
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT actividades.nombre FROM actividades LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					resp = ""#inicializamos variable resp
+					contador=1
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":[]}
+						lista[contador]['titulo']=registro[0]
+						lista[contador]['subtitulo']=registro[0]
+						lista[contador]['img']='https://imgtoboot.000webhostapp.com/img/nino.jpg'
+						lista[contador]['boton'].append("Ver información de la actividad "+registro[0])
+						lista[contador]['boton'].append("Donde se ubica el actividad "+registro[0])
+						lista[contador]['boton'].append("Horario de la actividad "+registro[0])
+						contador=contador+1
+					#enviamos la respuesta  al fulfillment de dialogflow
+					return enviartarjetas(lista,origen)
+			except Error:
+				return msj(mensaje_error)
+		elif idaplication!="":
+			
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT nombre FROM actividades LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					contador=1
+					lista={}
+					for registro in cursor:
+						lista[contador]={"boton":{"dos":[],"tres":[],"cuatro":[]}}
+						lista[contador]["titulo"]=registro[0]
+						lista[contador]["costo"]=""
+						lista[contador]["calidad"]=""
+						lista[contador]["sub"]="Calidad verificada"
+						lista[contador]["img"]="https://imgtoboot.000webhostapp.com/img/nino.jpg"
+						lista[contador]["descripcion"]="Esta es una actividad "+registro[0]
+						lista[contador]["boton"]["dos"].extend(("Ver información de "+registro[0],"submit"))
+						lista[contador]["boton"]["tres"].extend(("Donde se ubica el actividad "+registro[0],"submit"))
+						lista[contador]["boton"]["cuatro"].extend(("Horario de la actividad "+registro[0],"submit"))
+						contador=contador+1
+					#enviamos la respuesta  al fulfillment de dialogflow
+					return kommunicatecarrousel('Actividades',lista)
+			except Error:
+				return msj(mensaje_error)
+		else:
+			try:
+				with sqlite3.connect(db_filename) as conn:#creamos la conección.
+					conn.text_factory 	= lambda b: b.decode(errors = 'ignore')#esta linea ignora las letras con caracteres especiales, las elimina, esto se hace por que es una versin de prueba.
+					cursor = conn.cursor() #creamos cursor(Un cursor es el nombre para un área memoria privada que contiene información procedente de la ejecución de una sentencia SELECT. para mas informacion accede al siguiente enlace https://elbauldelprogramador.com/plsql-cursores/ ).
+					query = "SELECT actividades.nombre FROM actividades LIMIT 5" #creamos query para obtener el nombre de las habitaciones con las que cuenta el hotel.
+					cursor.execute(query)#ejecutamos el query.
+					resp = ""#inicializamos variable resp
+					contador=1
+					for registro in cursor:
+						if contador==1:
+							resp += registro[0]
+						else:
+							resp += ", "  + registro[0] #creamos un bucle para recuperar cada una de las filas, en este caso solo es una.
+						contador=2
+					#enviamos la respuesta  al fulfillment de dialogflow
+					if resp=="":
+						msjs="Las habitaciones no existen"
+					else:
+						msjs='Las habitaciones son: '+resp
+					return msj(msjs)
+			except Error:
+				return msj(mensaje_error)
+
+	if action=="action1.actividad_informacion":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_informacion(actividades)
+	
+	if action=="action1.actividad_descripcion":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_descripcion(actividades)
+	
+	if action=="action1.actividad_lugar":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_lugar(actividades)
+	
+	if action=="action1.actividad_dia":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_dia(actividades)
+	
+	if action=="action1.actividad_hora":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_hora(actividades)
+
+	if action=="action1.actividad_horario":
+		actividades=variable('actividades')
+		if actividades=="":
+			return msj('Ups no he podido ver la información requerida')
+		return actividades_horario(actividades)
+
+	#endregion
 
 # creando ruta para que interactue con dialogflow
 @app.route('/webhook', methods=['GET', 'POST'])
