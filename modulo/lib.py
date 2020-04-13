@@ -87,6 +87,13 @@ def instancia(nombre):
         return True #regreso valor True si es verdad
     else:
         return False #regreso valor False si es falso
+    
+def action(nombre):
+    req = request.get_json(force=True) #combierto los valores en un json
+    if req.get('queryResult').get('action'): #verifico su existencia
+        return req.get('queryResult').get('action') #regreso valor True si es verdad
+    else:
+        return '' #regreso valor False si es falso
 
 def getsesion(): #accede a la session de dialogflow
     req = request.get_json(force=True) #combierto los valores en un json
