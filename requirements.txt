@@ -6,7 +6,7 @@ cffi==1.11.5
 chardet==3.0.4
 Click==7.0
 conda==4.6.11
-cryptography==2.4.2
+cryptography==3.2
 dialogflow==0.7.2
 fbbotw==2.2.1
 Flask==1.1.1
